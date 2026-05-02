@@ -451,10 +451,10 @@
     gap: 8px;
     align-items: center;
     background: var(--paper);
-    border: 1.5px solid var(--ink);
+    border: 1px solid var(--line);
     border-radius: 12px;
     padding: 4px 4px 4px 14px;
-    box-shadow: 0 4px 16px -8px rgba(26,26,26,0.2);
+    box-shadow: var(--shadow);
   }
   .quick-input {
     flex: 1;
