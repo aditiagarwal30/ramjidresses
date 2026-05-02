@@ -27,7 +27,7 @@ export default function BillCard() {
   return (
     <div className="bill-card">
       <div className="bill-head">
-        <div>
+        <div style={{ flex: 1, cursor: 'pointer' }} onClick={editName}>
           <div className="label">Customer</div>
           <div className={'name' + (state.customer ? '' : ' placeholder')}>
             {state.customer || '— add name —'}

@@ -2,10 +2,20 @@ import { escapeHtml } from '../../lib/utils.js';
 import { useUI } from '../../state/UIContext.jsx';
 import { sendBillToWhatsApp, downloadPDF, copyText } from '../../lib/pdf.js';
 
-export default function DoneBillModal({ text, pdfData, onNewBill }) {
+export default function DoneBillModal({ text, pdfData, onConfirm, confirmLabel = 'DONE', onNewBill }) {
   const { showToast, hideModal } = useUI();
 
   const t = (m) => showToast(m);
+
+  const handleConfirm = async () => {
+    await onConfirm();
+    hideModal();
+  };
+
+  const handleNewBill = () => {
+    onNewBill();
+    hideModal();
+  };
 
   return (
     <>
@@ -28,13 +38,23 @@ export default function DoneBillModal({ text, pdfData, onNewBill }) {
         <button className="btn" onClick={() => downloadPDF(pdfData, t)}>SAVE PDF</button>
       </div>
       <div className="actions" style={{ marginTop: 6 }}>
-        <button
-          className="btn primary"
-          style={{ gridColumn: 'span 2' }}
-          onClick={() => { onNewBill(); hideModal(); }}
-        >
-          NEW BILL
-        </button>
+        {onNewBill ? (
+          <button
+            className="btn primary"
+            style={{ gridColumn: 'span 2' }}
+            onClick={handleNewBill}
+          >
+            NEW BILL
+          </button>
+        ) : (
+          <button
+            className="btn primary"
+            style={{ gridColumn: 'span 2' }}
+            onClick={handleConfirm}
+          >
+            {confirmLabel}
+          </button>
+        )}
       </div>
     </>
   );

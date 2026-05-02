@@ -16,9 +16,9 @@ export default function App() {
       <div className="app">
         <TopBar />
         <main>
-          <LookupView active={tab === 'lookup'} />
-          <BillView active={tab === 'bill'} />
-          <HistoryView active={tab === 'history'} />
+          {tab === 'lookup' && <LookupView active />}
+          {tab === 'bill' && <BillView active />}
+          {tab === 'history' && <HistoryView active />}
         </main>
         <TabBar />
       </div>
