@@ -437,14 +437,9 @@
   }
   .total-row.grand .val .rs { color: var(--accent); }
 
-  /* === Quick action input bar (sticky bottom of bill view) === */
+  /* === Quick action input bar === */
   .quickbar {
-    position: sticky;
-    bottom: 0;
-    margin: 0 -16px -8px;
-    padding: 10px 16px calc(10px + var(--safe-bottom));
-    background: linear-gradient(to bottom, transparent, var(--bg) 24%, var(--bg));
-    z-index: 5;
+    margin-bottom: 14px;
   }
   .quick-input-wrap {
     display: flex;
