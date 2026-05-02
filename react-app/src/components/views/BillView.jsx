@@ -66,6 +66,7 @@ export default function BillView({ active }) {
   return (
     <section className={'view' + (active ? ' active' : '')}>
       <Picker />
+      <QuickBar />
       <BillCard />
 
       <div className="actions three">
@@ -83,8 +84,6 @@ export default function BillView({ active }) {
           DONE — FINAL BILL
         </button>
       </div>
-
-      <QuickBar />
     </section>
   );
 }
