@@ -28,14 +28,36 @@ async function upsertMeta(fileName, userId, when) {
 
 export async function fetchRateSheet() {
   if (!supabase) return null;
-  const [ratesRes, metaRes] = await Promise.all([
-    supabase.from('rates').select('brand,article,size,rate'),
-    supabase.from('rate_sheet_meta').select('file_name,updated_at').eq('id', 1).maybeSingle(),
-  ]);
-  if (ratesRes.error) throw ratesRes.error;
+  // Postgrest caps a single select at 1000 rows by default, so we page through
+  // explicitly. Order by the primary key for a stable pagination window.
+  const PAGE = 1000;
+  const cols = 'brand,article,size,rate';
+  const first = await supabase
+    .from('rates')
+    .select(cols, { count: 'exact' })
+    .order('brand').order('article').order('size')
+    .range(0, PAGE - 1);
+  if (first.error) throw first.error;
+  const total = first.count ?? (first.data?.length ?? 0);
+  const all = first.data || [];
+  while (all.length < total) {
+    const next = await supabase
+      .from('rates')
+      .select(cols)
+      .order('brand').order('article').order('size')
+      .range(all.length, all.length + PAGE - 1);
+    if (next.error) throw next.error;
+    if (!next.data || next.data.length === 0) break;
+    all.push(...next.data);
+  }
+  const metaRes = await supabase
+    .from('rate_sheet_meta')
+    .select('file_name,updated_at')
+    .eq('id', 1)
+    .maybeSingle();
   if (metaRes.error) throw metaRes.error;
   return {
-    rates: ratesRes.data || [],
+    rates: all,
     file_name: metaRes.data?.file_name || null,
     updated_at: metaRes.data?.updated_at || null,
   };

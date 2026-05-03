@@ -12,7 +12,9 @@
       "Bash(curl -s \"https://ivuwiohkwnpipbjagrkw.supabase.co/rest/v1/\" -H \"apikey: sb_publishable_MQf28rjwkeZ4scpUCO5tgg_fRHtW8J7\" -H \"Accept: application/openapi+json\")",
       "Bash(python3 -c \"import sys, json; o=json.load\\(sys.stdin\\); print\\('keys:', list\\(o.keys\\(\\)\\)[:20]\\); print\\('paths:', list\\(o.get\\('paths',{}\\).keys\\(\\)\\)\\); print\\(json.dumps\\(o.get\\('definitions',{}\\).get\\('rates',{}\\), indent=2\\)[:1000]\\)\")",
       "Bash(curl -s \"https://ivuwiohkwnpipbjagrkw.supabase.co/rest/v1/\" -H \"apikey: sb_publishable_MQf28rjwkeZ4scpUCO5tgg_fRHtW8J7\")",
-      "Bash(curl -s -X POST https://ivuwiohkwnpipbjagrkw.supabase.co/rest/v1/rates -H 'apikey: sb_publishable_MQf28rjwkeZ4scpUCO5tgg_fRHtW8J7' -H 'Content-Type: application/json' -H 'Prefer: return=representation,resolution=merge-duplicates' -d '[{\"brand\":\"_TEST\",\"article\":\"X\",\"size\":\"S\",\"rate\":1.00}]' -w '\\\\nHTTP %{http_code}\\\\n')"
+      "Bash(curl -s -X POST https://ivuwiohkwnpipbjagrkw.supabase.co/rest/v1/rates -H 'apikey: sb_publishable_MQf28rjwkeZ4scpUCO5tgg_fRHtW8J7' -H 'Content-Type: application/json' -H 'Prefer: return=representation,resolution=merge-duplicates' -d '[{\"brand\":\"_TEST\",\"article\":\"X\",\"size\":\"S\",\"rate\":1.00}]' -w '\\\\nHTTP %{http_code}\\\\n')",
+      "Bash(curl -s -o /dev/null -w \"GET /rest/v1/rates: %{http_code}  time=%{time_total}s\\\\n\" -H \"apikey: sb_publishable_MQf28rjwkeZ4scpUCO5tgg_fRHtW8J7\" \"https://ivuwiohkwnpipbjagrkw.supabase.co/rest/v1/rates?limit=1\")",
+      "Bash(curl -s -o /dev/null -w \"OPTIONS preflight: %{http_code}\\\\n\" -X OPTIONS -H \"Origin: http://localhost:5173\" -H \"Access-Control-Request-Method: POST\" -H \"Access-Control-Request-Headers: apikey,authorization,content-type\" \"https://ivuwiohkwnpipbjagrkw.supabase.co/rest/v1/rates\")"
     ]
   }
 }
