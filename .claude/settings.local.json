@@ -1,7 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://ivuwiohkwnpipbjagrkw.supabase.co/rest/v1/rates?limit=1\" -H \"apikey: sb_publishable_MQf28rjwkeZ4scpUCO5tgg_fRHtW8J7\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://ivuwiohkwnpipbjagrkw.supabase.co/rest/v1/rate_sheet_meta?limit=1\" -H \"apikey: sb_publishable_MQf28rjwkeZ4scpUCO5tgg_fRHtW8J7\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://ivuwiohkwnpipbjagrkw.supabase.co/rest/v1/bills?limit=1\" -H \"apikey: sb_publishable_MQf28rjwkeZ4scpUCO5tgg_fRHtW8J7\")",
+      "Bash(curl -s \"https://ivuwiohkwnpipbjagrkw.supabase.co/rest/v1/rates?select=*&limit=3\" -H \"apikey: sb_publishable_MQf28rjwkeZ4scpUCO5tgg_fRHtW8J7\")",
+      "Bash(curl -s \"https://ivuwiohkwnpipbjagrkw.supabase.co/rest/v1/rate_sheet_meta?select=*\" -H \"apikey: sb_publishable_MQf28rjwkeZ4scpUCO5tgg_fRHtW8J7\")",
+      "Bash(curl -s \"https://ivuwiohkwnpipbjagrkw.supabase.co/rest/v1/?apikey=sb_publishable_MQf28rjwkeZ4scpUCO5tgg_fRHtW8J7\" -H \"Accept: application/openapi+json\")",
+      "Bash(python3 -c \"import sys, json; o=json.load\\(sys.stdin\\); paths=list\\(o.get\\('paths',{}\\).keys\\(\\)\\); print\\('paths:', [p for p in paths if 'rate' in p or 'bill' in p]\\); print\\('rates def:', json.dumps\\(o.get\\('definitions',{}\\).get\\('rates',{}\\), indent=2\\)\\); print\\('rsm def:', json.dumps\\(o.get\\('definitions',{}\\).get\\('rate_sheet_meta',{}\\), indent=2\\)\\)\")",
+      "Bash(curl -s \"https://ivuwiohkwnpipbjagrkw.supabase.co/rest/v1/\" -H \"apikey: sb_publishable_MQf28rjwkeZ4scpUCO5tgg_fRHtW8J7\" -H \"Accept: application/openapi+json\")",
+      "Bash(python3 -c \"import sys, json; o=json.load\\(sys.stdin\\); print\\('keys:', list\\(o.keys\\(\\)\\)[:20]\\); print\\('paths:', list\\(o.get\\('paths',{}\\).keys\\(\\)\\)\\); print\\(json.dumps\\(o.get\\('definitions',{}\\).get\\('rates',{}\\), indent=2\\)[:1000]\\)\")",
+      "Bash(curl -s \"https://ivuwiohkwnpipbjagrkw.supabase.co/rest/v1/\" -H \"apikey: sb_publishable_MQf28rjwkeZ4scpUCO5tgg_fRHtW8J7\")",
+      "Bash(curl -s -X POST https://ivuwiohkwnpipbjagrkw.supabase.co/rest/v1/rates -H 'apikey: sb_publishable_MQf28rjwkeZ4scpUCO5tgg_fRHtW8J7' -H 'Content-Type: application/json' -H 'Prefer: return=representation,resolution=merge-duplicates' -d '[{\"brand\":\"_TEST\",\"article\":\"X\",\"size\":\"S\",\"rate\":1.00}]' -w '\\\\nHTTP %{http_code}\\\\n')"
     ]
   }
 }

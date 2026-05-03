@@ -70,9 +70,9 @@ export default function DataManagerModal() {
     }
 
     const onMerge = async () => {
-      const { okLocal, okRemote, added, updated } = await mergeNewRates(parsed.rows, fileName);
+      const { okLocal, okRemote, added, updated, error } = await mergeNewRates(parsed.rows, fileName);
       if (!okLocal) showToast('Saved in memory (storage limit)');
-      else if (!okRemote) showToast(`✓ ${added} added · ${updated} updated · ⚠ cloud sync failed`);
+      else if (!okRemote) showToast(`⚠ cloud sync failed: ${error?.message || 'unknown error'}`);
       else showToast(`✓ ${added} added · ${updated} updated · synced`);
       hideModal();
     };

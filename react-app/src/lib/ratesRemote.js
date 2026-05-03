@@ -45,9 +45,15 @@ export async function fetchRateSheet() {
 // Used for the "Add & update" merge flow.
 export async function upsertRates(rows, fileName, userId) {
   if (!supabase) throw new Error('Supabase not configured');
+  // Postgres rejects duplicate conflict-target rows within a single ON CONFLICT
+  // upsert (SQLSTATE 21000). User-uploaded sheets often contain dupes, so
+  // collapse by (brand|article|size) here — last occurrence wins.
+  const seen = new Map();
+  for (const r of rows) seen.set(`${r.brand}|${r.article || ''}|${r.size}`, r);
+  const deduped = Array.from(seen.values());
   const when = new Date().toISOString();
-  for (let i = 0; i < rows.length; i += BATCH) {
-    const batch = rows.slice(i, i + BATCH).map((r) => toRow(r, userId, when));
+  for (let i = 0; i < deduped.length; i += BATCH) {
+    const batch = deduped.slice(i, i + BATCH).map((r) => toRow(r, userId, when));
     const { error } = await supabase
       .from('rates')
       .upsert(batch, { onConflict: 'brand,article,size' });
