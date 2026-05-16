@@ -5,9 +5,10 @@ import {
   loadStoredRates,
   loadRatesMeta,
   saveRates as persistRates,
+  clearStoredRates,
 } from '../lib/storage.js';
 import { useAuth } from './AuthContext.jsx';
-import { fetchRateSheet, upsertRates } from '../lib/ratesRemote.js';
+import { fetchRateSheet, upsertRates, clearRateSheet } from '../lib/ratesRemote.js';
 
 const RatesContext = createContext(null);
 
@@ -24,10 +25,8 @@ export function RatesProvider({ children }) {
 
   const idx = useMemo(() => buildIndexes(rates), [rates]);
 
-  // On user available: pull the shared rate sheet. If cloud is empty but this
-  // device already has a custom local sheet (meta means it came from a CSV
-  // upload), seed cloud with it — one-shot migration so existing customers
-  // don't lose their rates when sync turns on.
+  // On user available: pull the shared rate sheet. Supabase is authoritative —
+  // if cloud is empty, local cache is cleared too.
   useEffect(() => {
     if (!user) return;
     let canceled = false;
@@ -42,11 +41,9 @@ export function RatesProvider({ children }) {
             setMeta(loadRatesMeta());
           }
         } else {
-          const localMeta = loadRatesMeta();
-          const localRates = loadStoredRates();
-          if (localMeta && Array.isArray(localRates) && localRates.length) {
-            await upsertRates(localRates, localMeta.fileName, user.id);
-          }
+          setRates([]);
+          clearStoredRates();
+          setMeta(null);
         }
         setRatesSyncStatus('synced');
       } catch (e) {
@@ -96,9 +93,17 @@ export function RatesProvider({ children }) {
     return { okLocal, okRemote: remote.ok, added, updated, error: remote.error };
   }, [runRemote, user]);
 
+  const clearAllRates = useCallback(async () => {
+    const remote = await runRemote(() => clearRateSheet());
+    setRates([]);
+    clearStoredRates();
+    setMeta(null);
+    return remote;
+  }, [runRemote]);
+
   const value = useMemo(
-    () => ({ rates, meta, idx, ratesSyncStatus, mergeNewRates }),
-    [rates, meta, idx, ratesSyncStatus, mergeNewRates]
+    () => ({ rates, meta, idx, ratesSyncStatus, mergeNewRates, clearAllRates }),
+    [rates, meta, idx, ratesSyncStatus, mergeNewRates, clearAllRates]
   );
 
   return <RatesContext.Provider value={value}>{children}</RatesContext.Provider>;

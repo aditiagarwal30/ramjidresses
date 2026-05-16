@@ -61,6 +61,8 @@ export function BillProvider({ children }) {
 
   const addLine = useCallback((row, qty, opts = {}) => {
     if (!qty || qty <= 0) return;
+    // Print rate on the sheet is ₹10 above what gets billed.
+    const billedRate = Math.max(0, (row.rate || 0) - 10);
     setState((s) => ({
       ...s,
       lines: [
@@ -69,7 +71,7 @@ export function BillProvider({ children }) {
           brand: row.brand,
           article: row.article || '',
           size: row.size || '',
-          rate: row.rate,
+          rate: billedRate,
           qty,
           custom: !!opts.custom,
         },

@@ -15,11 +15,13 @@ export default function QuickBar() {
     const v = val.trim();
     if (!v) return { tone: '', text: 'or type shorthand here · "x" or "*" optional' };
     const r = parseInput(v, idx);
-    if (r.kind === 'item')
+    if (r.kind === 'item') {
+      const billed = Math.max(0, (r.row.rate || 0) - 10);
       return {
         tone: 'success',
-        text: `→ ${r.row.brand}${r.row.article ? ' ' + r.row.article : ''} sz ${r.row.size} · ${r.qty} × ${fmt(r.row.rate)} = ${fmt(r.qty * r.row.rate)}`,
+        text: `→ ${r.row.brand}${r.row.article ? ' ' + r.row.article : ''} sz ${r.row.size} · ${r.qty} × ${fmt(billed)} = ${fmt(r.qty * billed)}`,
       };
+    }
     if (r.kind === 'manual')
       return { tone: 'success', text: `→ ${r.qty} × ${fmt(r.rate)} = ${fmt(r.qty * r.rate)}` };
     if (r.kind === 'lookup')
@@ -78,11 +80,13 @@ export default function QuickBar() {
 
   return (
     <div className="quickbar">
+      <div className="quick-label">Manual Entry</div>
       <div className="quick-input-wrap">
+        <span className="quick-icon">＋</span>
         <input
           className="quick-input"
           type="text"
-          placeholder='shortcut: "sahil 2030 2"  or  "6 x 250"'
+          placeholder='e.g. "6 x 250"  or  "sahil 2030 2"'
           value={val}
           onChange={(e) => setVal(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}

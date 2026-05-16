@@ -5,6 +5,7 @@ import { useUI } from '../../state/UIContext.jsx';
 import { parseInput, findRow } from '../../lib/parser.js';
 import { fmt, fmt2, norm } from '../../lib/utils.js';
 import AskQtyModal from '../shared/AskQtyModal.jsx';
+import QuickBar from '../bill/QuickBar.jsx';
 
 export default function LookupView({ active }) {
   const { rates, idx } = useRates();
@@ -76,10 +77,12 @@ export default function LookupView({ active }) {
       <div style={{
         fontFamily: 'var(--font-mono)', fontSize: 10,
         letterSpacing: '0.1em', color: 'var(--muted)',
-        textTransform: 'uppercase', margin: '6px 2px 0',
+        textTransform: 'uppercase', margin: '6px 2px 12px',
       }}>
         {idx.brands.length} brands · {rates.length} items
       </div>
+
+      <QuickBar />
 
       <div className="chips">
         <span className="chip">type "sahil"</span>

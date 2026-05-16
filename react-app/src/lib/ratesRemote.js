@@ -63,6 +63,16 @@ export async function fetchRateSheet() {
   };
 }
 
+// Wipe every row in the rates table and clear the singleton meta row.
+// Supabase requires a filter on delete, so we use a tautological one.
+export async function clearRateSheet() {
+  if (!supabase) throw new Error('Supabase not configured');
+  const del = await supabase.from('rates').delete().gte('rate', 0);
+  if (del.error) throw del.error;
+  const meta = await supabase.from('rate_sheet_meta').delete().eq('id', 1);
+  if (meta.error) throw meta.error;
+}
+
 // Upsert just the supplied rows. Existing rows with other keys are untouched.
 // Used for the "Add & update" merge flow.
 export async function upsertRates(rows, fileName, userId) {

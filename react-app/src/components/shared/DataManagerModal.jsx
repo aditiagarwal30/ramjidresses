@@ -11,10 +11,24 @@ import { fmt } from '../../lib/utils.js';
  *   - 'preview': preview parsed rows + REPLACE ALL action
  */
 export default function DataManagerModal() {
-  const { rates, meta, idx, mergeNewRates } = useRates();
+  const { rates, meta, idx, mergeNewRates, clearAllRates } = useRates();
   const { showToast, hideModal } = useUI();
   const [screen, setScreen] = useState({ kind: 'home' });
+  const [clearing, setClearing] = useState(false);
   const fileRef = useRef(null);
+
+  const onClearAll = async () => {
+    if (!window.confirm(`Delete all ${rates.length} rates from cloud and this device? This cannot be undone.`)) return;
+    setClearing(true);
+    const res = await clearAllRates();
+    setClearing(false);
+    if (res?.ok === false) {
+      showToast(`⚠ cloud clear failed: ${res.error?.message || 'unknown error'}`);
+    } else {
+      showToast('✓ all rates cleared');
+      hideModal();
+    }
+  };
 
   const onFileChange = async (e) => {
     const file = e.target.files && e.target.files[0];
@@ -180,6 +194,17 @@ export default function DataManagerModal() {
         style={{ display: 'none' }}
         onChange={onFileChange}
       />
+
+      {rates.length > 0 && (
+        <button
+          className="btn danger"
+          style={{ width: '100%', padding: 12, fontSize: 12, marginTop: 10 }}
+          onClick={onClearAll}
+          disabled={clearing}
+        >
+          {clearing ? 'CLEARING…' : `CLEAR ALL RATES (${rates.length})`}
+        </button>
+      )}
     </>
   );
 }
