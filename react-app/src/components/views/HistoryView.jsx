@@ -1,17 +1,19 @@
 import { useState, useMemo } from 'react';
 import { useBill } from '../../state/BillContext.jsx';
 import { useUI } from '../../state/UIContext.jsx';
-import { fmt2 } from '../../lib/utils.js';
+import { fmt, fmt2 } from '../../lib/utils.js';
 import { calcTotals } from '../../lib/storage.js';
 import { sendBillToWhatsApp, downloadPDF, copyText } from '../../lib/pdf.js';
 import { buildReceiptText } from '../../lib/receipt.js';
 
 export default function HistoryView({ active }) {
-  const { history, deleteHistoryItem } = useBill();
+  const { history, updateHistoryItem, deleteHistoryItem } = useBill();
   const { showToast } = useUI();
   const [openId, setOpenId] = useState(null);
+  const [editSnapshot, setEditSnapshot] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // Today's date in YYYY-MM-DD format
   const open = openId != null ? history.find((h) => h.id === openId) : null;
+  const editing = !!editSnapshot;
 
   // Filter bills by selected date and calculate total sales
   const { filteredBills, totalSales } = useMemo(() => {
@@ -48,13 +50,139 @@ export default function HistoryView({ active }) {
     }
     const text = open.text || (pdfData ? buildReceiptText(pdfData) : '');
 
+    if (editing) {
+      const editTotals = calcTotals(editSnapshot);
+      const updateLine = (i, patch) => {
+        setEditSnapshot((s) => {
+          const lines = s.lines.map((l, idx) => (idx === i ? { ...l, ...patch } : l));
+          return { ...s, lines };
+        });
+      };
+      const deleteLine = (i) => {
+        setEditSnapshot((s) => ({ ...s, lines: s.lines.filter((_, idx) => idx !== i) }));
+      };
+      const onSave = async () => {
+        if (editSnapshot.lines.length === 0) {
+          if (!window.confirm('No items left — delete the bill instead?')) return;
+          deleteHistoryItem(open.id);
+          setEditSnapshot(null);
+          setOpenId(null);
+          showToast('deleted');
+          return;
+        }
+        const t2 = calcTotals(editSnapshot);
+        const updatedPdfData = {
+          lines: JSON.parse(JSON.stringify(editSnapshot.lines)),
+          customer: editSnapshot.customer,
+          discount: editSnapshot.discount,
+          gst: editSnapshot.gst,
+          totals: t2,
+          billNo: open.billNo,
+          date: open.date,
+          time: open.time,
+        };
+        const updated = {
+          ...open,
+          customer: editSnapshot.customer,
+          total: t2.total,
+          items: editSnapshot.lines.length,
+          qty: t2.qtyCount,
+          snapshot: editSnapshot,
+          pdfData: updatedPdfData,
+          text: buildReceiptText({ ...editSnapshot, totals: t2, billNo: open.billNo, date: open.date, time: open.time }),
+        };
+        await updateHistoryItem(updated);
+        setEditSnapshot(null);
+        showToast('saved');
+      };
+      return (
+        <section className={'view' + (active ? ' active' : '')}>
+          <div className="section-h">
+            <span><em>Editing {open.billNo}</em></span>
+            <span className="count">{editSnapshot.lines.length} {editSnapshot.lines.length === 1 ? 'LINE' : 'LINES'}</span>
+          </div>
+          <ol className="bill-lines" style={{ marginBottom: 10 }}>
+            {editSnapshot.lines.map((l, i) => (
+              <li key={i} className="bill-line" style={{ alignItems: 'flex-start' }}>
+                <span className="num">{i + 1}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="it-name">
+                    {l.brand}{l.article ? ' / ' + l.article : ''}
+                    {l.custom && <em style={{ fontSize: 11, color: 'var(--muted)' }}> (manual)</em>}
+                  </div>
+                  <div className="it-detail" style={{ marginBottom: 4 }}>
+                    {l.size ? `SIZE ${l.size}` : ''}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <label style={{ fontSize: 10, color: 'var(--muted)' }}>Qty</label>
+                    <input
+                      type="number"
+                      value={l.qty}
+                      min="0"
+                      inputMode="numeric"
+                      onChange={(e) => updateLine(i, { qty: parseFloat(e.target.value) || 0 })}
+                      style={{ width: 56, padding: '4px 6px', fontSize: 13, border: '1px solid var(--line)', borderRadius: 6 }}
+                    />
+                    <label style={{ fontSize: 10, color: 'var(--muted)' }}>Rate</label>
+                    <input
+                      type="number"
+                      value={l.rate}
+                      min="0"
+                      step="0.01"
+                      inputMode="decimal"
+                      onChange={(e) => updateLine(i, { rate: parseFloat(e.target.value) || 0 })}
+                      style={{ width: 72, padding: '4px 6px', fontSize: 13, border: '1px solid var(--line)', borderRadius: 6 }}
+                    />
+                    <button
+                      className="btn danger"
+                      style={{ padding: '4px 8px', fontSize: 10 }}
+                      onClick={() => deleteLine(i)}
+                    >
+                      DEL
+                    </button>
+                  </div>
+                </div>
+                <div className="it-amount">{fmt(l.rate * l.qty)}</div>
+              </li>
+            ))}
+          </ol>
+          <div className="bill-totals">
+            <div className="total-row">
+              <span className="lbl">Subtotal</span>
+              <span className="val">{fmt(editTotals.subtotal)}</span>
+            </div>
+            {editTotals.discAmt > 0 && (
+              <div className="total-row">
+                <span className="lbl">Discount</span>
+                <span className="val" style={{ color: 'var(--bad)' }}>− {fmt(editTotals.discAmt)}</span>
+              </div>
+            )}
+            {editSnapshot.gst > 0 && (
+              <div className="total-row">
+                <span className="lbl">GST {editSnapshot.gst}%</span>
+                <span className="val">+ {fmt(editTotals.gstAmt)}</span>
+              </div>
+            )}
+            <div className="total-row grand">
+              <span className="lbl">Total</span>
+              <span className="val"><span className="rs">₹</span>{fmt2(editTotals.total)}</span>
+            </div>
+          </div>
+          <div className="actions" style={{ marginTop: 10 }}>
+            <button className="btn" onClick={() => setEditSnapshot(null)}>CANCEL</button>
+            <button className="btn primary" onClick={onSave}>SAVE CHANGES</button>
+          </div>
+        </section>
+      );
+    }
+
     return (
       <section className={'view' + (active ? ' active' : '')}>
         <div className="section-h">
           <span><em>Saved Bills</em></span>
           <span className="count">{filteredBills.length}{filteredBills.length === 1 ? ' BILL' : ' BILLS'}</span>
         </div>
-        <button className="btn" style={{ marginBottom: 10 }} onClick={() => setOpenId(null)}>← BACK</button>
+        <button className="btn" style={{ marginBottom: 10 }} onClick={() => { setOpenId(null); setEditSnapshot(null); }}>← BACK</button>
         <div className="receipt">{text}</div>
         <div className="actions" style={{ marginTop: 10 }}>
           <button
@@ -70,6 +198,22 @@ export default function HistoryView({ active }) {
           <button className="btn" onClick={() => pdfData ? downloadPDF(pdfData, t) : t('PDF data unavailable')}>SAVE PDF</button>
         </div>
         <div className="actions" style={{ marginTop: 6 }}>
+          <button
+            className="btn"
+            onClick={() => {
+              const baseSnap = open.snapshot
+                ? JSON.parse(JSON.stringify(open.snapshot))
+                : {
+                    customer: open.customer || '',
+                    lines: pdfData?.lines ? JSON.parse(JSON.stringify(pdfData.lines)) : [],
+                    discount: pdfData?.discount || { type: null, value: 0 },
+                    gst: pdfData?.gst || 0,
+                  };
+              setEditSnapshot(baseSnap);
+            }}
+          >
+            EDIT BILL
+          </button>
           <button
             className="btn danger"
             onClick={() => {

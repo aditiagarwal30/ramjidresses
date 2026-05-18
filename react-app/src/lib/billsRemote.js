@@ -62,6 +62,29 @@ export async function insertBill(bill, userId) {
   return rowToBill(data);
 }
 
+// Update an existing bill's editable fields. Bill number, id, created_at,
+// created_by are intentionally not touched — the bill keeps its identity.
+export async function updateBill(bill) {
+  if (!supabase) throw new Error('Supabase not configured');
+  const snapshot = { ...(bill.snapshot || {}), _dateStr: bill.date, _timeStr: bill.time };
+  const payload = {
+    customer: bill.customer || null,
+    total: bill.total,
+    items: bill.items,
+    qty: bill.qty,
+    snapshot,
+    pdf_data: bill.pdfData || null,
+  };
+  const { data, error } = await supabase
+    .from('bills')
+    .update(payload)
+    .eq('id', bill.id)
+    .select()
+    .single();
+  if (error) throw error;
+  return rowToBill(data);
+}
+
 export async function softDeleteBill(id) {
   if (!supabase) throw new Error('Supabase not configured');
   const { error } = await supabase

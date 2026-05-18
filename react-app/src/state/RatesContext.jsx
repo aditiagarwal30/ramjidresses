@@ -1,5 +1,4 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { DEFAULT_RATES } from '../data/rates.js';
 import { buildIndexes } from '../lib/indexes.js';
 import {
   loadStoredRates,
@@ -14,7 +13,7 @@ const RatesContext = createContext(null);
 
 function loadInitialRates() {
   const stored = loadStoredRates();
-  return stored && stored.length ? stored : DEFAULT_RATES;
+  return stored && stored.length ? stored : [];
 }
 
 export function RatesProvider({ children }) {

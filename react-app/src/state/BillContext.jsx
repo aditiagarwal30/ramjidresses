@@ -8,7 +8,7 @@ import {
   calcTotals,
 } from '../lib/storage.js';
 import { useAuth } from './AuthContext.jsx';
-import { fetchAllBills, insertBill, softDeleteBill } from '../lib/billsRemote.js';
+import { fetchAllBills, insertBill, updateBill, softDeleteBill } from '../lib/billsRemote.js';
 
 const BillContext = createContext(null);
 
@@ -175,6 +175,24 @@ export function BillProvider({ children }) {
     }
   }, [user]);
 
+  const updateHistoryItem = useCallback(async (billRecord) => {
+    setHistory((h) => h.map((b) => (b.id === billRecord.id ? billRecord : b)));
+    if (!user) return billRecord;
+    setSyncStatus('syncing');
+    try {
+      const saved = await updateBill(billRecord);
+      const merged = { ...saved, text: billRecord.text };
+      setHistory((h) => h.map((b) => (b.id === saved.id ? merged : b)));
+      setSyncStatus('synced');
+      return merged;
+    } catch (e) {
+      console.error('updateBill failed', e);
+      setSyncStatus(navigator.onLine ? 'error' : 'offline');
+      setPendingCount((c) => c + 1);
+      return billRecord;
+    }
+  }, [user]);
+
   const deleteHistoryItem = useCallback(async (id) => {
     setHistory((h) => h.filter((x) => x.id !== id));
     if (!user) return;
@@ -190,12 +208,12 @@ export function BillProvider({ children }) {
     () => ({
       state, totals, history, syncStatus, pendingCount,
       setCustomer, addLine, addManual, updateLine, removeLine,
-      setDiscount, setGst, clearBill, finalizeBill, pushHistory, deleteHistoryItem,
+      setDiscount, setGst, clearBill, finalizeBill, pushHistory, updateHistoryItem, deleteHistoryItem,
     }),
     [
       state, totals, history, syncStatus, pendingCount,
       setCustomer, addLine, addManual, updateLine, removeLine,
-      setDiscount, setGst, clearBill, finalizeBill, pushHistory, deleteHistoryItem,
+      setDiscount, setGst, clearBill, finalizeBill, pushHistory, updateHistoryItem, deleteHistoryItem,
     ]
   );
 
