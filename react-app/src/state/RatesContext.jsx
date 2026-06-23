@@ -92,6 +92,24 @@ export function RatesProvider({ children }) {
     return { okLocal, okRemote: remote.ok, added, updated, error: remote.error };
   }, [runRemote, user]);
 
+  // Edit a single item's rate in place (post-lookup). Updates local state +
+  // cache immediately, then upserts just that one row to Supabase.
+  const updateRate = useCallback(async (target, newRate) => {
+    const keyOf = (r) => `${r.brand}|${r.article || ''}|${r.size}`;
+    const k = keyOf(target);
+    let merged;
+    setRates((prev) => {
+      merged = prev.map((r) => (keyOf(r) === k ? { ...r, rate: newRate } : r));
+      return merged;
+    });
+    const okLocal = persistRates(merged, meta?.fileName ?? null);
+    if (okLocal) setMeta(loadRatesMeta());
+    const remote = await runRemote(() =>
+      upsertRates([{ ...target, rate: newRate }], meta?.fileName ?? null, user?.id)
+    );
+    return { okLocal, okRemote: remote.ok, error: remote.error };
+  }, [runRemote, user, meta]);
+
   const clearAllRates = useCallback(async () => {
     const remote = await runRemote(() => clearRateSheet());
     setRates([]);
@@ -101,8 +119,8 @@ export function RatesProvider({ children }) {
   }, [runRemote]);
 
   const value = useMemo(
-    () => ({ rates, meta, idx, ratesSyncStatus, mergeNewRates, clearAllRates }),
-    [rates, meta, idx, ratesSyncStatus, mergeNewRates, clearAllRates]
+    () => ({ rates, meta, idx, ratesSyncStatus, mergeNewRates, updateRate, clearAllRates }),
+    [rates, meta, idx, ratesSyncStatus, mergeNewRates, updateRate, clearAllRates]
   );
 
   return <RatesContext.Provider value={value}>{children}</RatesContext.Provider>;

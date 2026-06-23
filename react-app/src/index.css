@@ -276,6 +276,25 @@
   }
   .result-rate .rs { color: var(--accent); margin-right: 1px; }
 
+  .rate-edit {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid var(--line-soft);
+    background: var(--paper);
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+  .rate-edit:active { transform: scale(0.94); }
+  .rate-edit:hover { border-color: var(--accent); color: var(--accent); }
+
   /* Brand pill row */
   .brand-grid {
     display: grid;

@@ -5,10 +5,11 @@ import { useUI } from '../../state/UIContext.jsx';
 import { parseInput, findRow } from '../../lib/parser.js';
 import { fmt, fmt2, norm } from '../../lib/utils.js';
 import AskQtyModal from '../shared/AskQtyModal.jsx';
+import EditRateModal from '../shared/EditRateModal.jsx';
 import QuickBar from '../bill/QuickBar.jsx';
 
 export default function LookupView({ active }) {
-  const { rates, idx } = useRates();
+  const { rates, idx, updateRate } = useRates();
   const { addLine } = useBill();
   const { showModal } = useUI();
   const [q, setQ] = useState('');
@@ -37,6 +38,14 @@ export default function LookupView({ active }) {
     showModal({
       title: 'Add to bill',
       body: <AskQtyModal row={row} onConfirm={(qty) => addLine(row, qty)} />,
+      hideOk: true,
+    });
+  };
+
+  const editRate = (row) => {
+    showModal({
+      title: 'Update rate',
+      body: <EditRateModal row={row} onSave={updateRate} />,
       hideOk: true,
     });
   };
@@ -92,7 +101,7 @@ export default function LookupView({ active }) {
 
       {result.kind === 'home' && <BrandGrid onPick={pickBrand} />}
       {result.kind === 'rows' && (
-        <ResultsGrouped rows={result.rows} ctx={result.ctx} idx={idx} onPick={askQty} />
+        <ResultsGrouped rows={result.rows} ctx={result.ctx} idx={idx} onPick={askQty} onEditRate={editRate} />
       )}
       {result.kind === 'manual' && (
         <div className="empty">
@@ -124,7 +133,7 @@ function BrandGrid({ onPick }) {
   );
 }
 
-function ResultsGrouped({ rows, ctx, idx, onPick }) {
+function ResultsGrouped({ rows, ctx, idx, onPick, onEditRate }) {
   if (!rows || rows.length === 0) {
     return (
       <div className="empty">
@@ -151,8 +160,8 @@ function ResultsGrouped({ rows, ctx, idx, onPick }) {
           {g.rows.map((r, i) => {
             const matched = findRow(r.brand, r.article, r.size, idx) || r;
             return (
-              <li key={i} className="result" onClick={() => onPick(matched)}>
-                <div className="result-info">
+              <li key={i} className="result">
+                <div className="result-info" onClick={() => onPick(matched)}>
                   <div className="result-brand">
                     {g.brand}
                     {g.article && (
@@ -164,9 +173,17 @@ function ResultsGrouped({ rows, ctx, idx, onPick }) {
                   </div>
                   <div className="result-detail">SIZE {r.size}</div>
                 </div>
-                <div className="result-rate">
+                <div className="result-rate" onClick={() => onPick(matched)}>
                   <span className="rs">₹</span>{fmt2(r.rate)}
                 </div>
+                <button
+                  className="rate-edit"
+                  aria-label="edit rate"
+                  title="Edit rate"
+                  onClick={(e) => { e.stopPropagation(); onEditRate(matched); }}
+                >
+                  ✎
+                </button>
               </li>
             );
           })}

@@ -1,6 +1,6 @@
 import { escapeHtml } from '../../lib/utils.js';
 import { useUI } from '../../state/UIContext.jsx';
-import { sendBillToWhatsApp, downloadPDF, copyText } from '../../lib/pdf.js';
+import { sendBillToWhatsApp, downloadPDF, printPDF, copyText } from '../../lib/pdf.js';
 
 export default function DoneBillModal({ text, pdfData, onConfirm, confirmLabel = 'DONE', onNewBill }) {
   const { showToast, hideModal } = useUI();
@@ -34,8 +34,13 @@ export default function DoneBillModal({ text, pdfData, onConfirm, confirmLabel =
         </button>
       </div>
       <div className="actions" style={{ marginTop: 6 }}>
-        <button className="btn" onClick={() => copyText(text, t)}>COPY</button>
+        <button className="btn" onClick={() => printPDF(pdfData, t)}>🖨 PRINT</button>
         <button className="btn" onClick={() => downloadPDF(pdfData, t)}>SAVE PDF</button>
+      </div>
+      <div className="actions" style={{ marginTop: 6 }}>
+        <button className="btn" style={{ gridColumn: 'span 2' }} onClick={() => copyText(text, t)}>
+          COPY TEXT
+        </button>
       </div>
       <div className="actions" style={{ marginTop: 6 }}>
         {onNewBill ? (

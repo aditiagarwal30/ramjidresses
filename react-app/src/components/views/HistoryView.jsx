@@ -3,7 +3,7 @@ import { useBill } from '../../state/BillContext.jsx';
 import { useUI } from '../../state/UIContext.jsx';
 import { fmt, fmt2 } from '../../lib/utils.js';
 import { calcTotals } from '../../lib/storage.js';
-import { sendBillToWhatsApp, downloadPDF, copyText } from '../../lib/pdf.js';
+import { sendBillToWhatsApp, downloadPDF, printPDF, copyText } from '../../lib/pdf.js';
 import { buildReceiptText } from '../../lib/receipt.js';
 
 export default function HistoryView({ active }) {
@@ -194,8 +194,11 @@ export default function HistoryView({ active }) {
           </button>
         </div>
         <div className="actions" style={{ marginTop: 6 }}>
-          <button className="btn" onClick={() => copyText(text, t)}>COPY</button>
+          <button className="btn" onClick={() => pdfData ? printPDF(pdfData, t) : t('PDF data unavailable')}>🖨 PRINT</button>
           <button className="btn" onClick={() => pdfData ? downloadPDF(pdfData, t) : t('PDF data unavailable')}>SAVE PDF</button>
+        </div>
+        <div className="actions" style={{ marginTop: 6 }}>
+          <button className="btn" style={{ gridColumn: 'span 2' }} onClick={() => copyText(text, t)}>COPY TEXT</button>
         </div>
         <div className="actions" style={{ marginTop: 6 }}>
           <button
