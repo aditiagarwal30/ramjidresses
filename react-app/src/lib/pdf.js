@@ -201,10 +201,24 @@ export function generatePDF(billData, opts = {}) {
 
   const t = billData.totals;
 
+  // Footer rows. DISCOUNT only appears when there is one, so the printed
+  // figures always reconcile: TOTAL − DISCOUNT + TRANSPORT + TAX − DEPOSIT = NET BILL.
+  const rows = [];
+  if (t.discAmt > 0) {
+    const dl = billData.discount && billData.discount.type === 'pct'
+      ? `DISCOUNT ${billData.discount.value}%`
+      : 'DISCOUNT';
+    rows.push({ label: dl, value: '- ' + Math.round(t.discAmt) });
+  }
+  rows.push({ label: 'TRANSPORT', value: t.transport > 0 ? '+ ' + Math.round(t.transport) : '' });
+  rows.push({ label: 'TAX', value: t.gstAmt > 0 ? '+ ' + Math.round(t.gstAmt) : '' });
+  rows.push({ label: 'DEPOSIT', value: t.deposit > 0 ? '- ' + Math.round(t.deposit) : '' });
+  rows.push({ label: 'NET BILL', value: String(Math.round(t.total)), net: true });
+
   // --- TOTAL row + footer: keep together; move to a fresh page if needed ---
   const totH = 8;
   const footRowH = 9;
-  const footH = footRowH * 4;
+  const footH = footRowH * rows.length;
   if (y + totH + footH + 8 > ITEMS_BOTTOM) {
     doc.addPage();
     contHeader();
@@ -227,19 +241,13 @@ export function generatePDF(billData, opts = {}) {
   doc.text(String(Math.round(t.subtotal)), totalC, ty, { align: 'center' });
   y += totH;
 
-  // --- footer: TRANSPORT / TAX / DEPOSIT / NET BILL  +  QR ---
+  // --- footer: DISCOUNT / TRANSPORT / TAX / DEPOSIT / NET BILL  +  QR ---
   const footTop = y;
   const labelW = 38;
   const valueW = 30;
   const fValX = left + labelW;        // 45
   const qrZoneX = fValX + valueW;     // 75
   const qrZoneW = right - qrZoneX;    // 66
-  const rows = [
-    { label: 'TRANSPORT', value: t.transport > 0 ? '+ ' + Math.round(t.transport) : '' },
-    { label: 'TAX', value: t.gstAmt > 0 ? '+ ' + Math.round(t.gstAmt) : '' },
-    { label: 'DEPOSIT', value: t.deposit > 0 ? '- ' + Math.round(t.deposit) : '' },
-    { label: 'NET BILL', value: String(Math.round(t.total)), net: true },
-  ];
 
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.3);
