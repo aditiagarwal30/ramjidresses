@@ -3,6 +3,8 @@ import BillCard from '../bill/BillCard.jsx';
 import QuickBar from '../bill/QuickBar.jsx';
 import DiscountModal from '../bill/DiscountModal.jsx';
 import GstModal from '../bill/GstModal.jsx';
+import TransportModal from '../bill/TransportModal.jsx';
+import DepositModal from '../bill/DepositModal.jsx';
 import DoneBillModal from '../bill/DoneBillModal.jsx';
 import CustomerNameModal from '../bill/CustomerNameModal.jsx';
 import { useBill } from '../../state/BillContext.jsx';
@@ -18,6 +20,12 @@ export default function BillView({ active }) {
   };
   const onGst = () => {
     showModal({ title: 'GST %', body: <GstModal />, hideOk: true });
+  };
+  const onTransport = () => {
+    showModal({ title: 'Transport charges', body: <TransportModal />, hideOk: true });
+  };
+  const onDeposit = () => {
+    showModal({ title: 'Deposit / advance', body: <DepositModal />, hideOk: true });
   };
   const onClear = () => {
     if (!window.confirm('Clear current bill?')) return;
@@ -69,9 +77,13 @@ export default function BillView({ active }) {
       <QuickBar />
       <BillCard />
 
-      <div className="actions three">
+      <div className="actions">
         <button className="btn" onClick={onDiscount}>DISCOUNT</button>
         <button className="btn" onClick={onGst}>GST</button>
+      </div>
+      <div className="actions three">
+        <button className="btn" onClick={onTransport}>TRANSPORT</button>
+        <button className="btn" onClick={onDeposit}>DEPOSIT</button>
         <button className="btn danger" onClick={onClear}>CLEAR</button>
       </div>
       <div className="actions">

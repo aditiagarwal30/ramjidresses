@@ -1,153 +1,302 @@
 import { jsPDF } from 'jspdf';
+import QRCode from 'qrcode';
+
+// Broadcast / WhatsApp channel the bottom QR points to.
+export const CHANNEL_URL = 'https://chat.whatsapp.com/DHti4FTnLnk9yHelWuACUy?mode=gi_t';
+
+const FIRM = 'SAHIB TRADERS';
+const GREETING = 'JI AYA NU';
+
+// Palette (RGB)
+const C_LIGHTGREEN = [226, 240, 217];
+const C_GREEN = [112, 173, 71];
+const C_YELLOW = [255, 242, 0];
+const C_GREENHL = [169, 208, 142];
+const C_MUTED = [110, 110, 110];
 
 /**
- * Generate an A4 tax-invoice PDF. Long bills paginate across multiple A4
- * sheets (real page breaks) instead of being squeezed onto one tall page.
- * billData: { lines, customer, discount, gst, totals, billNo, date, time }
+ * Generate an A5 wholesale-style invoice PDF that mirrors the shop's paper
+ * format: greeting band, customer band, meta rows, a bordered item table,
+ * a green TOTAL row, the TRANSPORT/TAX/DEPOSIT/NET BILL footer, and a QR to
+ * the firm's broadcast channel. Long bills paginate across A5 sheets.
+ * billData: { lines, customer, salesman, discount, gst, totals, billNo, date, time }
  */
-export function generatePDF(billData) {
-  const pageW = 210; // A4 width in mm
-  const pageH = 297; // A4 height in mm
-  const margin = 16;
-  const right = pageW - margin;
+export function generatePDF(billData, opts = {}) {
+  const masked = !!opts.masked; // hide the ITEM column (item names removed)
+  const pageW = 148; // A5 width in mm
+  const pageH = 210; // A5 height in mm
+  const margin = 7;
+  const left = margin;
+  const right = pageW - margin;   // 141
+  const contentW = right - left;  // 134
 
-  // Column x-positions (right edges are right-aligned)
-  const numX = margin;
-  const itemX = margin + 9;
-  const qtyRight = 132;
-  const rateRight = 162;
-  const amtRight = right;
-  const maxNameW = qtyRight - itemX - 8;
+  // Item-table columns — widths differ when the ITEM column is masked off.
+  const colDefs = masked
+    ? [{ k: 'sno', w: 16 }, { k: 'qty', w: 28 }, { k: 'rate', w: 30 }, { k: 'total', w: 36 }, { k: 'rem', w: 24 }]
+    : [{ k: 'sno', w: 11 }, { k: 'item', w: 47 }, { k: 'qty', w: 16 }, { k: 'rate', w: 17 }, { k: 'total', w: 22 }, { k: 'rem', w: 21 }];
+  const col = {};
+  let acc = left;
+  for (const d of colDefs) { col[d.k] = { x0: acc, x1: acc + d.w, c: acc + d.w / 2 }; acc += d.w; }
+  // Internal divider x-positions (right edge of every column except the last).
+  const dividers = colDefs.slice(0, -1).map((d) => col[d.k].x1);
+  const snoC = col.sno.c;
+  const qtyC = col.qty.c;
+  const rateC = col.rate.c;
+  const totalC = col.total.c;
+  const remC = col.rem.c;
+  const itemX = masked ? 0 : col.item.x0 + 2;
+  const itemMaxW = masked ? 0 : col.item.w - 4;
+  // "TOTAL" summary label spans from the left edge to the QTY column.
+  const totalLabelC = (left + col.qty.x0) / 2;
 
-  // Bottom of the printable area for line items.
-  const bottomLimit = pageH - margin - 6;
+  const ITEMS_BOTTOM = pageH - margin - 4;
 
-  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  const doc = new jsPDF({ unit: 'mm', format: 'a5', orientation: 'portrait' });
   let y = 0;
 
-  const drawTableHeader = () => {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.text('#', numX, y);
-    doc.text('ITEM', itemX, y);
-    doc.text('QTY', qtyRight, y, { align: 'right' });
-    doc.text('RATE', rateRight, y, { align: 'right' });
-    doc.text('AMOUNT', amtRight, y, { align: 'right' });
-    y += 2;
+  const setText = (c) => doc.setTextColor(c[0], c[1], c[2]);
+  const setFill = (c) => doc.setFillColor(c[0], c[1], c[2]);
+
+  // QR rendered as vector squares (sync — no async image step).
+  const drawQR = (text, x, qy, size) => {
+    let qr;
+    try { qr = QRCode.create(text, { errorCorrectionLevel: 'M' }); }
+    catch (e) { return; }
+    const n = qr.modules.size;
+    const data = qr.modules.data;
+    const px = size / n;
+    setFill([0, 0, 0]);
+    for (let r = 0; r < n; r++) {
+      for (let col = 0; col < n; col++) {
+        if (data[r * n + col]) {
+          doc.rect(x + col * px, qy + r * px, px + 0.03, px + 0.03, 'F');
+        }
+      }
+    }
+  };
+
+  // Yellow column header — repeats on every page.
+  const drawTableHead = () => {
+    const h = 8;
+    setFill(C_YELLOW);
+    doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(0.3);
-    doc.line(margin, y, right, y);
-    y += 6;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-  };
-
-  const drawPageHeader = (continued) => {
-    y = margin + 6;
+    doc.rect(left, y, contentW, h, 'FD');
+    dividers.forEach((x) => doc.line(x, y, x, y + h));
+    setText([0, 0, 0]);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(22);
-    doc.text('RAMJI DRESSES', pageW / 2, y, { align: 'center' });
-    y += 7;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text('TAX INVOICE / BILL' + (continued ? ' (continued)' : ''), pageW / 2, y, {
-      align: 'center',
-    });
-    y += 6;
-    doc.setLineWidth(0.4);
-    doc.line(margin, y, right, y);
-    y += 8;
-
-    doc.setFontSize(10);
-    doc.text(`Bill: ${billData.billNo}`, margin, y);
-    doc.text(billData.date, right, y, { align: 'right' });
-    y += 5;
-    doc.text(`Time: ${billData.time}`, margin, y);
-    if (billData.customer) {
-      doc.text(`Customer: ${billData.customer}`, right, y, { align: 'right' });
-    }
-    y += 8;
-    drawTableHeader();
+    doc.setFontSize(8);
+    const hy = y + 5.4;
+    doc.text('S.NO', snoC, hy, { align: 'center' });
+    if (!masked) doc.text('ITEM', itemX, hy);
+    doc.text('QTY', qtyC, hy, { align: 'center' });
+    doc.text('RATE', rateC, hy, { align: 'center' });
+    doc.text('TOTAL', totalC, hy, { align: 'center' });
+    doc.text('REMARKS', remC, hy, { align: 'center' });
+    y += h;
   };
 
-  drawPageHeader(false);
+  // Slim continuation marker on pages 2+.
+  const contHeader = () => {
+    y = margin;
+    setText(C_MUTED);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text(FIRM + ' (contd.)', pageW / 2, y + 4, { align: 'center' });
+    y += 6;
+  };
 
+  // Full top banner (page 1 only).
+  const drawTopHeader = () => {
+    y = margin;
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.3);
+
+    // Greeting + firm band
+    const bH = 15;
+    setFill(C_LIGHTGREEN);
+    doc.rect(left, y, contentW, bH, 'FD');
+    setText([0, 0, 0]);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text(GREETING, pageW / 2, y + 5.5, { align: 'center' });
+    doc.setFontSize(15);
+    doc.text(FIRM, pageW / 2, y + 12, { align: 'center' });
+    y += bH;
+
+    // Customer band
+    const cH = 9;
+    setFill(C_GREEN);
+    doc.rect(left, y, contentW, cH, 'FD');
+    setText([0, 0, 0]);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text(billData.customer || '—', pageW / 2, y + 6.2, { align: 'center' });
+    y += cH;
+
+    // Meta rows (2 rows × 2 cells)
+    const mH = 7;
+    const midX = left + contentW / 2;
+    const labelVal = (lbl, val, x, yy) => {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      setText([0, 0, 0]);
+      doc.text(lbl, x + 2, yy + 4.8);
+      const lw = doc.getTextWidth(lbl);
+      doc.setFont('helvetica', 'normal');
+      doc.text(' ' + val, x + 2 + lw, yy + 4.8);
+    };
+
+    doc.rect(left, y, contentW / 2, mH);
+    doc.rect(midX, y, contentW / 2, mH);
+    labelVal('ADDRESS:-', billData.address || '', left, y);
+    labelVal('DATE:-', billData.date || '', midX, y);
+    y += mH;
+
+    doc.rect(left, y, contentW / 2, mH);
+    doc.rect(midX, y, contentW / 2, mH);
+    labelVal('INVOICE NO:-', billData.billNo || '', left, y);
+    // Salesman (+ time) sits in the top-right cell.
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    setText([0, 0, 0]);
+    const rv = (billData.salesman ? billData.salesman + '   ' : '') + (billData.time || '');
+    doc.text(rv, midX + 2, y + 4.8);
+    y += mH;
+
+    drawTableHead();
+  };
+
+  drawTopHeader();
+
+  // --- item rows ---
+  doc.setLineWidth(0.3);
   billData.lines.forEach((l, i) => {
-    const itemNameRaw = `${l.brand}${l.article ? ' ' + l.article : ''}${l.size ? ' · Size ' + l.size : ''}`;
-    const wrapped = doc.splitTextToSize(itemNameRaw, maxNameW);
-    const rowH = Math.max(7, wrapped.length * 4.6 + 2.5);
+    const nm = `${l.brand}${l.article ? ' ' + l.article : ''}${l.size ? ' ' + l.size : ''}`;
+    const wrapped = masked ? [] : doc.splitTextToSize(nm, itemMaxW);
+    const rH = Math.max(7, wrapped.length * 3.8 + 3);
 
-    if (y + rowH > bottomLimit) {
+    if (y + rH > ITEMS_BOTTOM) {
       doc.addPage();
-      drawPageHeader(true);
+      contHeader();
+      drawTableHead();
     }
 
-    doc.text(String(i + 1), numX, y);
-    doc.text(wrapped, itemX, y);
-    doc.text(String(l.qty), qtyRight, y, { align: 'right' });
-    doc.text(String(Math.round(l.rate)), rateRight, y, { align: 'right' });
-    doc.setFont('helvetica', 'bold');
-    doc.text(String(Math.round(l.rate * l.qty)), amtRight, y, { align: 'right' });
+    doc.setDrawColor(0, 0, 0);
+    doc.rect(left, y, contentW, rH);
+    dividers.forEach((x) => doc.line(x, y, x, y + rH));
+
+    setText([0, 0, 0]);
     doc.setFont('helvetica', 'normal');
-    y += rowH;
+    doc.setFontSize(8.5);
+    const by = wrapped.length > 1 ? y + 4 : y + rH / 2 + 1.4;
+    doc.text(String(i + 1), snoC, by, { align: 'center' });
+    if (!masked) doc.text(wrapped, itemX, by);
+    doc.text(String(l.qty), qtyC, by, { align: 'center' });
+    doc.text(String(Math.round(l.rate)), rateC, by, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.text(String(Math.round(l.rate * l.qty)), totalC, by, { align: 'center' });
+    y += rH;
   });
 
-  // Totals block — keep it together; push to a new page if it won't fit.
   const t = billData.totals;
-  const rows = 1 + (t.discAmt > 0 ? 1 : 0) + (billData.gst > 0 ? 1 : 0);
-  const totalsH = rows * 6 + 30;
-  if (y + totalsH > bottomLimit) {
+
+  // --- TOTAL row + footer: keep together; move to a fresh page if needed ---
+  const totH = 8;
+  const footRowH = 9;
+  const footH = footRowH * 4;
+  if (y + totH + footH + 8 > ITEMS_BOTTOM) {
     doc.addPage();
-    drawPageHeader(true);
+    contHeader();
   }
 
-  y += 2;
+  // TOTAL row (green qty + total cells)
+  setFill(C_GREENHL);
+  doc.rect(col.qty.x0, y, col.qty.x1 - col.qty.x0, totH, 'F');
+  doc.rect(col.total.x0, y, col.total.x1 - col.total.x0, totH, 'F');
+  doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.3);
-  doc.line(margin, y, right, y);
-  y += 8;
-
-  const labelX = 128;
-  doc.setFontSize(11);
-  doc.text('Subtotal', labelX, y);
-  doc.text(String(Math.round(t.subtotal)), amtRight, y, { align: 'right' });
-  y += 6;
-  if (t.discAmt > 0) {
-    const dl =
-      billData.discount.type === 'pct'
-        ? `Discount (${billData.discount.value}%)`
-        : 'Discount';
-    doc.text(dl, labelX, y);
-    doc.text('-' + Math.round(t.discAmt), amtRight, y, { align: 'right' });
-    y += 6;
-  }
-  if (billData.gst > 0) {
-    doc.text(`GST ${billData.gst}%`, labelX, y);
-    doc.text('+' + Math.round(t.gstAmt), amtRight, y, { align: 'right' });
-    y += 6;
-  }
-  doc.setLineWidth(0.4);
-  doc.line(labelX, y, right, y);
-  y += 8;
+  doc.rect(left, y, contentW, totH);
+  dividers.forEach((x) => doc.line(x, y, x, y + totH));
+  setText([0, 0, 0]);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(15);
-  doc.text('TOTAL', labelX, y);
-  doc.text('Rs. ' + Math.round(t.total).toLocaleString('en-IN'), amtRight, y, { align: 'right' });
-  y += 10;
+  doc.setFontSize(9.5);
+  const ty = y + 5.4;
+  doc.text('TOTAL', totalLabelC, ty, { align: 'center' });
+  doc.text(String(t.qtyCount), qtyC, ty, { align: 'center' });
+  doc.text(String(Math.round(t.subtotal)), totalC, ty, { align: 'center' });
+  y += totH;
 
+  // --- footer: TRANSPORT / TAX / DEPOSIT / NET BILL  +  QR ---
+  const footTop = y;
+  const labelW = 38;
+  const valueW = 30;
+  const fValX = left + labelW;        // 45
+  const qrZoneX = fValX + valueW;     // 75
+  const qrZoneW = right - qrZoneX;    // 66
+  const rows = [
+    { label: 'TRANSPORT', value: t.transport > 0 ? '+ ' + Math.round(t.transport) : '' },
+    { label: 'TAX', value: t.gstAmt > 0 ? '+ ' + Math.round(t.gstAmt) : '' },
+    { label: 'DEPOSIT', value: t.deposit > 0 ? '- ' + Math.round(t.deposit) : '' },
+    { label: 'NET BILL', value: String(Math.round(t.total)), net: true },
+  ];
+
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.3);
+  rows.forEach((row, i) => {
+    const ry = footTop + i * footRowH;
+    if (row.net) {
+      setFill(C_GREENHL);
+      doc.rect(fValX, ry, valueW, footRowH, 'F');
+    }
+    doc.rect(left, ry, labelW, footRowH);
+    doc.rect(fValX, ry, valueW, footRowH);
+    setText([0, 0, 0]);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(row.label.length > 7 ? 9 : 10);
+    doc.text(row.label, left + 2, ry + footRowH / 2 + 1.6);
+    if (row.value) {
+      doc.setFontSize(10);
+      doc.text(
+        row.value,
+        fValX + valueW - 2,
+        ry + footRowH / 2 + 1.6,
+        { align: 'right' }
+      );
+    }
+  });
+
+  // QR zone (spans all 4 footer rows)
+  doc.rect(qrZoneX, footTop, qrZoneW, footH);
+  setText([0, 0, 0]);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.text(FIRM, qrZoneX + qrZoneW / 2, footTop + 4.5, { align: 'center' });
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.text(`${billData.lines.length} items · ${t.qtyCount} qty`, margin, y);
-  y += 8;
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(10);
-  doc.text('Thank you — visit again', pageW / 2, y, { align: 'center' });
+  doc.setFontSize(6.5);
+  setText(C_MUTED);
+  doc.text('Scan to join our channel', qrZoneX + qrZoneW / 2, footTop + 8, { align: 'center' });
+  const qrSize = Math.min(qrZoneW - 6, footH - 12);
+  drawQR(CHANNEL_URL, qrZoneX + (qrZoneW - qrSize) / 2, footTop + 10, qrSize);
+  y = footTop + footH;
 
-  // Page numbers across all pages (now that the total count is known).
+  // Closing line
+  y += 5;
+  setText(C_MUTED);
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(8);
+  doc.text('HAVE A NICE DAY', pageW / 2, y, { align: 'center' });
+
+  // Page numbers only when it spills past one sheet.
   const pageCount = doc.getNumberOfPages();
-  for (let p = 1; p <= pageCount; p++) {
-    doc.setPage(p);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.text(`Page ${p} of ${pageCount}`, pageW / 2, pageH - 8, { align: 'center' });
+  if (pageCount > 1) {
+    for (let p = 1; p <= pageCount; p++) {
+      doc.setPage(p);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      setText(C_MUTED);
+      doc.text(`Page ${p} / ${pageCount}`, pageW / 2, pageH - 3.5, { align: 'center' });
+    }
   }
 
   return doc;
@@ -161,8 +310,8 @@ export function generatePDF(billData) {
  * If the browser doesn't support file share (most desktops), we tell the
  * user to use SAVE PDF instead — we explicitly DO NOT auto-download here.
  */
-export async function sendBillToWhatsApp(billData, toast) {
-  const doc = generatePDF(billData);
+export async function sendBillToWhatsApp(billData, toast, opts = {}) {
+  const doc = generatePDF(billData, opts);
   if (!doc) {
     toast('PDF lib not ready');
     return;
@@ -193,12 +342,12 @@ export async function sendBillToWhatsApp(billData, toast) {
 }
 
 /**
- * Open the OS print dialog for the bill. Generates the A4 PDF, loads it into
+ * Open the OS print dialog for the bill. Generates the A5 PDF, loads it into
  * a hidden iframe, and triggers print — so the user picks any printer / paper
  * and gets the proper multi-page layout instead of a screenshot.
  */
-export function printPDF(billData, toast) {
-  const doc = generatePDF(billData);
+export function printPDF(billData, toast, opts = {}) {
+  const doc = generatePDF(billData, opts);
   if (!doc) { toast('PDF lib not ready'); return; }
 
   doc.autoPrint();
@@ -232,10 +381,11 @@ export function printPDF(billData, toast) {
   toast('opening print…');
 }
 
-export function downloadPDF(billData, toast) {
-  const doc = generatePDF(billData);
+export function downloadPDF(billData, toast, opts = {}) {
+  const doc = generatePDF(billData, opts);
   if (!doc) { toast('PDF lib not ready'); return; }
-  doc.save(`bill-${billData.billNo.replace('#', '')}.pdf`);
+  const tag = opts.masked ? '-masked' : '';
+  doc.save(`bill-${billData.billNo.replace('#', '')}${tag}.pdf`);
   toast('PDF saved to device');
 }
 

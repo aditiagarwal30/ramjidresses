@@ -32,6 +32,16 @@ export default function BillCard() {
           <div className={'name' + (state.customer ? '' : ' placeholder')}>
             {state.customer || '— add name —'}
           </div>
+          {state.salesman && (
+            <div className="label" style={{ marginTop: 4 }}>
+              Salesman · {state.salesman}
+            </div>
+          )}
+          {state.address && (
+            <div className="label" style={{ marginTop: 4 }}>
+              Address · {state.address}
+            </div>
+          )}
         </div>
         <button
           className="btn"
@@ -85,6 +95,18 @@ export default function BillCard() {
             <div className="total-row">
               <span className="lbl">GST {state.gst}%</span>
               <span className="val">+ {fmt(totals.gstAmt)}</span>
+            </div>
+          )}
+          {totals.transport > 0 && (
+            <div className="total-row">
+              <span className="lbl">Transport</span>
+              <span className="val">+ {fmt(totals.transport)}</span>
+            </div>
+          )}
+          {totals.deposit > 0 && (
+            <div className="total-row">
+              <span className="lbl">Deposit</span>
+              <span className="val" style={{ color: 'var(--bad)' }}>− {fmt(totals.deposit)}</span>
             </div>
           )}
           <div className="total-row grand">

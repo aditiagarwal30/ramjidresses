@@ -12,7 +12,7 @@ export function buildReceiptText(b) {
   const seph = '='.repeat(W);
 
   let out = '';
-  out += '       RAMJI DRESSES\n';
+  out += '       SAHIB TRADERS\n';
   out += '       — — — — — — —\n';
   out += line(b.date, b.time) + '\n';
   out += line('Bill ' + b.billNo, b.customer ? '' + b.customer : '') + '\n';
@@ -31,6 +31,8 @@ export function buildReceiptText(b) {
     out += line(dl, '-' + Math.round(b.totals.discAmt)) + '\n';
   }
   if (b.gst > 0) out += line(`GST ${b.gst}%`, '+' + Math.round(b.totals.gstAmt)) + '\n';
+  if (b.totals.transport > 0) out += line('Transport', '+' + Math.round(b.totals.transport)) + '\n';
+  if (b.totals.deposit > 0) out += line('Deposit', '-' + Math.round(b.totals.deposit)) + '\n';
   out += seph + '\n';
   out += line('TOTAL  Rs.', Math.round(b.totals.total).toLocaleString('en-IN')) + '\n';
   out += seph + '\n';

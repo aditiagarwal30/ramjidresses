@@ -35,7 +35,7 @@ export default function TopBar() {
 
   return (
     <header className="topbar">
-      <h1>Ramji<span className="dot">.</span> <em style={{ fontSize: '0.7em', opacity: 0.65 }}>dresses</em></h1>
+      <h1>Sahib<span className="dot">.</span> <em style={{ fontSize: '0.7em', opacity: 0.65 }}>traders</em></h1>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span
           title={user?.email ? `Signed in as ${user.email}` : ''}

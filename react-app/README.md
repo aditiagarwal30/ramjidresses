@@ -1,4 +1,4 @@
-# Ramji Dresses — React port
+# Sahib Traders — React port
 
 Faithful React + Vite port of the original `main.html` single-file app. Same
 design, same logic, same localStorage keys (so existing saved bills /

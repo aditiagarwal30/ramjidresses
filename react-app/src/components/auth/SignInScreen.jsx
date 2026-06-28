@@ -12,7 +12,7 @@ export default function SignInScreen() {
     return (
       <div style={wrap}>
         <div style={card}>
-          <h1 style={title}>Ramji<span style={{ color: 'var(--accent)' }}>.</span> <em style={{ fontSize: '0.7em', opacity: 0.65 }}>dresses</em></h1>
+          <h1 style={title}>Sahib<span style={{ color: 'var(--accent)' }}>.</span> <em style={{ fontSize: '0.7em', opacity: 0.65 }}>traders</em></h1>
           <p style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--ink-soft)' }}>
             Cloud sync is not configured. Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> to <code>.env.local</code>, then restart the dev server.
           </p>
@@ -38,7 +38,7 @@ export default function SignInScreen() {
     <div style={wrap}>
       <form onSubmit={onSubmit} style={card}>
         <h1 style={title}>
-          Ramji<span style={{ color: 'var(--accent)' }}>.</span> <em style={{ fontSize: '0.7em', opacity: 0.65 }}>dresses</em>
+          Sahib<span style={{ color: 'var(--accent)' }}>.</span> <em style={{ fontSize: '0.7em', opacity: 0.65 }}>traders</em>
         </h1>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.1em', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 12 }}>
           Staff sign in

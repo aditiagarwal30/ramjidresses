@@ -59,6 +59,14 @@ export function BillProvider({ children }) {
     setState((s) => ({ ...s, customer: (name || '').trim() }));
   }, []);
 
+  const setSalesman = useCallback((name) => {
+    setState((s) => ({ ...s, salesman: (name || '').trim() }));
+  }, []);
+
+  const setAddress = useCallback((address) => {
+    setState((s) => ({ ...s, address: (address || '').trim() }));
+  }, []);
+
   const addLine = useCallback((row, qty, opts = {}) => {
     if (!qty || qty <= 0) return;
     // Print rate on the sheet is ₹10 above what gets billed.
@@ -116,6 +124,14 @@ export function BillProvider({ children }) {
     setState((s) => ({ ...s, gst }));
   }, []);
 
+  const setTransport = useCallback((amount) => {
+    setState((s) => ({ ...s, transport: Math.max(0, Number(amount) || 0) }));
+  }, []);
+
+  const setDeposit = useCallback((amount) => {
+    setState((s) => ({ ...s, deposit: Math.max(0, Number(amount) || 0) }));
+  }, []);
+
   const clearBill = useCallback(() => {
     setState(defaultBillState());
   }, []);
@@ -145,6 +161,8 @@ export function BillProvider({ children }) {
       pdfData: {
         lines: JSON.parse(JSON.stringify(snapshot.lines)),
         customer: snapshot.customer,
+        salesman: snapshot.salesman || '',
+        address: snapshot.address || '',
         discount: snapshot.discount,
         gst: snapshot.gst,
         totals: t,
@@ -207,13 +225,13 @@ export function BillProvider({ children }) {
   const value = useMemo(
     () => ({
       state, totals, history, syncStatus, pendingCount,
-      setCustomer, addLine, addManual, updateLine, removeLine,
-      setDiscount, setGst, clearBill, finalizeBill, pushHistory, updateHistoryItem, deleteHistoryItem,
+      setCustomer, setSalesman, setAddress, addLine, addManual, updateLine, removeLine,
+      setDiscount, setGst, setTransport, setDeposit, clearBill, finalizeBill, pushHistory, updateHistoryItem, deleteHistoryItem,
     }),
     [
       state, totals, history, syncStatus, pendingCount,
-      setCustomer, addLine, addManual, updateLine, removeLine,
-      setDiscount, setGst, clearBill, finalizeBill, pushHistory, updateHistoryItem, deleteHistoryItem,
+      setCustomer, setSalesman, setAddress, addLine, addManual, updateLine, removeLine,
+      setDiscount, setGst, setTransport, setDeposit, clearBill, finalizeBill, pushHistory, updateHistoryItem, deleteHistoryItem,
     ]
   );
 

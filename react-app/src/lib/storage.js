@@ -6,9 +6,13 @@ export const HIST_KEY = 'paras.bill.history.v1';
 export function defaultBillState() {
   return {
     customer: '',
+    salesman: '',
+    address: '',
     lines: [],
     discount: { type: null, value: 0 },
     gst: 0,
+    transport: 0,
+    deposit: 0,
   };
 }
 
@@ -89,7 +93,9 @@ export function calcTotals(snap) {
   if (discAmt > subtotal) discAmt = subtotal;
   const afterDisc = subtotal - discAmt;
   const gstAmt = afterDisc * (snap.gst || 0) / 100;
-  const total = afterDisc + gstAmt;
+  const transport = Math.max(0, Number(snap.transport) || 0);
+  const deposit = Math.max(0, Number(snap.deposit) || 0);
+  const total = afterDisc + gstAmt + transport - deposit;
   const qtyCount = (snap.lines || []).reduce((s, l) => s + l.qty, 0);
-  return { subtotal, discAmt, afterDisc, gstAmt, total, qtyCount };
+  return { subtotal, discAmt, afterDisc, gstAmt, transport, deposit, total, qtyCount };
 }

@@ -188,14 +188,14 @@ export default function HistoryView({ active }) {
           <button
             className="btn whatsapp"
             style={{ gridColumn: 'span 2' }}
-            onClick={() => pdfData ? sendBillToWhatsApp(pdfData, t) : t('PDF data unavailable')}
+            onClick={() => pdfData ? sendBillToWhatsApp(pdfData, t, { masked: !!pdfData.masked }) : t('PDF data unavailable')}
           >
             📄 SEND PDF · WHATSAPP
           </button>
         </div>
         <div className="actions" style={{ marginTop: 6 }}>
-          <button className="btn" onClick={() => pdfData ? printPDF(pdfData, t) : t('PDF data unavailable')}>🖨 PRINT</button>
-          <button className="btn" onClick={() => pdfData ? downloadPDF(pdfData, t) : t('PDF data unavailable')}>SAVE PDF</button>
+          <button className="btn" onClick={() => pdfData ? printPDF(pdfData, t, { masked: !!pdfData.masked }) : t('PDF data unavailable')}>🖨 PRINT</button>
+          <button className="btn" onClick={() => pdfData ? downloadPDF(pdfData, t, { masked: !!pdfData.masked }) : t('PDF data unavailable')}>SAVE PDF</button>
         </div>
         <div className="actions" style={{ marginTop: 6 }}>
           <button className="btn" style={{ gridColumn: 'span 2' }} onClick={() => copyText(text, t)}>COPY TEXT</button>
