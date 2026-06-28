@@ -342,9 +342,13 @@ export async function sendBillToWhatsApp(billData, toast, opts = {}) {
 }
 
 /**
- * Open the OS print dialog for the bill. Generates the A5 PDF, loads it into
- * a hidden iframe, and triggers print — so the user picks any printer / paper
- * and gets the proper multi-page layout instead of a screenshot.
+ * Print the bill. Opens the generated PDF in a new tab and lets the PDF
+ * viewer drive the print dialog (via autoPrint).
+ *
+ * We deliberately DON'T use a hidden iframe + contentWindow.print(): on
+ * Safari/macOS that prints the host web page (the app UI) instead of the
+ * PDF inside the iframe. Opening the real PDF guarantees the right document
+ * is what gets printed.
  */
 export function printPDF(billData, toast, opts = {}) {
   const doc = generatePDF(billData, opts);
@@ -353,31 +357,25 @@ export function printPDF(billData, toast, opts = {}) {
   doc.autoPrint();
   const url = doc.output('bloburl');
 
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = '0';
-  iframe.src = url;
+  const win = window.open(url, '_blank');
+  if (!win) {
+    // Pop-up blocked — fall back to a direct download so the user still
+    // gets the correct PDF (which they can then print).
+    const tag = opts.masked ? '-masked' : '';
+    doc.save(`bill-${billData.billNo.replace('#', '')}${tag}.pdf`);
+    toast('Pop-up blocked · PDF saved — open it to print');
+    return;
+  }
 
-  iframe.onload = () => {
-    try {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-    } catch (e) {
-      // Some mobile browsers block iframe printing — fall back to a new tab.
-      window.open(url, '_blank');
-    }
-    // Clean up well after the print dialog has had time to open.
-    setTimeout(() => {
-      iframe.remove();
-      URL.revokeObjectURL(url);
-    }, 60000);
-  };
+  // Some viewers ignore autoPrint; nudge the print dialog once the PDF loads.
+  try {
+    win.addEventListener('load', () => {
+      try { win.focus(); win.print(); } catch (e) { /* viewer handles it */ }
+    });
+  } catch (e) { /* cross-viewer access blocked — autoPrint still applies */ }
 
-  document.body.appendChild(iframe);
+  // Release the blob URL well after the viewer has loaded it.
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
   toast('opening print…');
 }
 
