@@ -12,14 +12,20 @@ export default function HistoryView({ active }) {
   const [openId, setOpenId] = useState(null);
   const [editSnapshot, setEditSnapshot] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // Today's date in YYYY-MM-DD format
+  const [search, setSearch] = useState('');
   const open = openId != null ? history.find((h) => h.id === openId) : null;
   const editing = !!editSnapshot;
 
-  // Filter bills by selected date and calculate total sales
+  const searching = search.trim().length > 0;
+
+  // When searching: match by customer name across ALL dates.
+  // Otherwise: filter by the selected date. Either way, sum the matches.
   const { filteredBills, totalSales } = useMemo(() => {
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const q = search.trim().toLowerCase();
 
     const filtered = history.filter((bill) => {
+      if (q) return (bill.customer || '').toLowerCase().includes(q);
       const [day, monthName, year] = (bill.date || '').split(' ');
       const month = monthNames.indexOf(monthName) + 1;
       if (!day || !month || !year) return false;
@@ -30,7 +36,7 @@ export default function HistoryView({ active }) {
     const total = filtered.reduce((sum, bill) => sum + bill.total, 0);
 
     return { filteredBills: filtered, totalSales: total };
-  }, [history, selectedDate]);
+  }, [history, selectedDate, search]);
 
   if (open) {
     const t = (m) => showToast(m);
@@ -61,6 +67,23 @@ export default function HistoryView({ active }) {
       const deleteLine = (i) => {
         setEditSnapshot((s) => ({ ...s, lines: s.lines.filter((_, idx) => idx !== i) }));
       };
+      const setNum = (key, v) => {
+        setEditSnapshot((s) => ({ ...s, [key]: Math.max(0, parseFloat(v) || 0) }));
+      };
+      const setDiscType = (type) => {
+        setEditSnapshot((s) => ({ ...s, discount: { type, value: s.discount?.value || 0 } }));
+      };
+      const setDiscValue = (v) => {
+        const val = Math.max(0, parseFloat(v) || 0);
+        setEditSnapshot((s) => ({
+          ...s,
+          discount: { type: val > 0 ? (s.discount?.type || 'pct') : null, value: val },
+        }));
+      };
+      const discType = editSnapshot.discount?.type || 'pct';
+      const pill = { padding: '4px 9px', fontSize: 12, border: '1px solid var(--line)', borderRadius: 6, background: 'var(--bg)', cursor: 'pointer' };
+      const pillOn = { ...pill, background: 'var(--accent)', color: '#fff', borderColor: 'var(--accent)' };
+      const numIn = { width: 84, padding: '4px 6px', fontSize: 13, border: '1px solid var(--line)', borderRadius: 6, textAlign: 'right' };
       const onSave = async () => {
         if (editSnapshot.lines.length === 0) {
           if (!window.confirm('No items left — delete the bill instead?')) return;
@@ -74,12 +97,15 @@ export default function HistoryView({ active }) {
         const updatedPdfData = {
           lines: JSON.parse(JSON.stringify(editSnapshot.lines)),
           customer: editSnapshot.customer,
+          salesman: editSnapshot.salesman || '',
+          address: editSnapshot.address || '',
           discount: editSnapshot.discount,
           gst: editSnapshot.gst,
           totals: t2,
           billNo: open.billNo,
           date: open.date,
           time: open.time,
+          masked: open.pdfData?.masked || false,
         };
         const updated = {
           ...open,
@@ -146,6 +172,31 @@ export default function HistoryView({ active }) {
               </li>
             ))}
           </ol>
+          <div style={{ padding: '10px 12px', background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 8, marginBottom: 10 }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.1em', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 8 }}>
+              Adjustments
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', gap: 8 }}>
+              <span style={{ fontSize: 13 }}>Discount</span>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <button style={discType !== 'flat' ? pillOn : pill} onClick={() => setDiscType('pct')}>%</button>
+                <button style={discType === 'flat' ? pillOn : pill} onClick={() => setDiscType('flat')}>₹</button>
+                <input type="number" min="0" inputMode="decimal" value={editSnapshot.discount?.value || ''} onChange={(e) => setDiscValue(e.target.value)} style={numIn} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0' }}>
+              <span style={{ fontSize: 13 }}>GST %</span>
+              <input type="number" min="0" step="0.5" inputMode="decimal" value={editSnapshot.gst || ''} onChange={(e) => setNum('gst', e.target.value)} style={numIn} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0' }}>
+              <span style={{ fontSize: 13 }}>Transport ₹</span>
+              <input type="number" min="0" inputMode="decimal" value={editSnapshot.transport || ''} onChange={(e) => setNum('transport', e.target.value)} style={numIn} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0' }}>
+              <span style={{ fontSize: 13 }}>Deposit ₹</span>
+              <input type="number" min="0" inputMode="decimal" value={editSnapshot.deposit || ''} onChange={(e) => setNum('deposit', e.target.value)} style={numIn} />
+            </div>
+          </div>
           <div className="bill-totals">
             <div className="total-row">
               <span className="lbl">Subtotal</span>
@@ -161,6 +212,18 @@ export default function HistoryView({ active }) {
               <div className="total-row">
                 <span className="lbl">GST {editSnapshot.gst}%</span>
                 <span className="val">+ {fmt(editTotals.gstAmt)}</span>
+              </div>
+            )}
+            {editTotals.transport > 0 && (
+              <div className="total-row">
+                <span className="lbl">Transport</span>
+                <span className="val">+ {fmt(editTotals.transport)}</span>
+              </div>
+            )}
+            {editTotals.deposit > 0 && (
+              <div className="total-row">
+                <span className="lbl">Deposit</span>
+                <span className="val" style={{ color: 'var(--bad)' }}>− {fmt(editTotals.deposit)}</span>
               </div>
             )}
             <div className="total-row grand">
@@ -208,10 +271,17 @@ export default function HistoryView({ active }) {
                 ? JSON.parse(JSON.stringify(open.snapshot))
                 : {
                     customer: open.customer || '',
+                    salesman: pdfData?.salesman || '',
+                    address: pdfData?.address || '',
                     lines: pdfData?.lines ? JSON.parse(JSON.stringify(pdfData.lines)) : [],
                     discount: pdfData?.discount || { type: null, value: 0 },
                     gst: pdfData?.gst || 0,
                   };
+              // Ensure adjustment fields exist (older bills predate some of them).
+              baseSnap.discount = baseSnap.discount || { type: null, value: 0 };
+              baseSnap.gst = baseSnap.gst || 0;
+              baseSnap.transport = baseSnap.transport || 0;
+              baseSnap.deposit = baseSnap.deposit || 0;
               setEditSnapshot(baseSnap);
             }}
           >
@@ -240,42 +310,74 @@ export default function HistoryView({ active }) {
         <span className="count">{history.length}{history.length === 1 ? ' BILL' : ' BILLS'}</span>
       </div>
 
-      {/* Date picker and total sales */}
-      <div style={{ marginBottom: 16, padding: '12px', background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 8 }}>
-        <div style={{ marginBottom: 8 }}>
-          <label style={{ display: 'block', fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.1em', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 4 }}>
-            Select Date
-          </label>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              fontSize: 14,
-              border: '1px solid var(--line)',
-              borderRadius: 6,
-              background: 'var(--bg)',
-              fontFamily: 'inherit',
-              boxSizing: 'border-box'
-            }}
-          />
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* Global customer search */}
+      <div className="searchwrap" style={{ marginBottom: 10 }}>
+        <span className="search-icon">⌕</span>
+        <input
+          className="search"
+          type="text"
+          placeholder="Search customer (all dates)…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          autoComplete="off"
+          inputMode="search"
+        />
+        <button
+          className={'search-clear' + (search ? ' show' : '')}
+          aria-label="clear"
+          onClick={() => setSearch('')}
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Date picker (hidden while searching) and total sales */}
+      {searching ? (
+        <div style={{ marginBottom: 16, padding: '12px', background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: 14, color: 'var(--muted)' }}>
-            {filteredBills.length} bill{filteredBills.length !== 1 ? 's' : ''} on {new Date(selectedDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+            {filteredBills.length} bill{filteredBills.length !== 1 ? 's' : ''} for “{search.trim()}”
           </span>
           <div style={{ fontSize: 16, fontWeight: 'bold', color: 'var(--accent)' }}>
             <span className="rs">₹</span>{fmt2(totalSales)}
           </div>
         </div>
-      </div>
+      ) : (
+        <div style={{ marginBottom: 16, padding: '12px', background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 8 }}>
+          <div style={{ marginBottom: 8 }}>
+            <label style={{ display: 'block', fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.1em', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 4 }}>
+              Select Date
+            </label>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                fontSize: 14,
+                border: '1px solid var(--line)',
+                borderRadius: 6,
+                background: 'var(--bg)',
+                fontFamily: 'inherit',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 14, color: 'var(--muted)' }}>
+              {filteredBills.length} bill{filteredBills.length !== 1 ? 's' : ''} on {new Date(selectedDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </span>
+            <div style={{ fontSize: 16, fontWeight: 'bold', color: 'var(--accent)' }}>
+              <span className="rs">₹</span>{fmt2(totalSales)}
+            </div>
+          </div>
+        </div>
+      )}
 
       {filteredBills.length === 0 ? (
         <div className="empty">
-          <div className="big">No bills on this date</div>
-          <div>select a different date to see bills</div>
+          <div className="big">{searching ? 'No matching bills' : 'No bills on this date'}</div>
+          <div>{searching ? 'try a different customer name' : 'select a different date to see bills'}</div>
         </div>
       ) : (
         filteredBills.map((h) => (
