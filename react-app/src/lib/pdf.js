@@ -222,6 +222,9 @@ export function generatePDF(billData, opts = {}) {
   }
   rows.push({ label: 'TRANSPORT', value: t.transport > 0 ? '+ ' + Math.round(t.transport) : '' });
   rows.push({ label: 'TAX', value: t.gstAmt > 0 ? '+ ' + Math.round(t.gstAmt) : '' });
+  if (t.previousBalance > 0) {
+    rows.push({ label: 'PREVIOUS BALANCE', value: '+ ' + Math.round(t.previousBalance) });
+  }
   rows.push({ label: 'DEPOSIT', value: t.deposit > 0 ? '- ' + Math.round(t.deposit) : '' });
   rows.push({ label: 'NET BILL', value: String(Math.round(t.total)), net: true });
 
