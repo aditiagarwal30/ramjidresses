@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useBill } from '../../state/BillContext.jsx';
 import { useUI } from '../../state/UIContext.jsx';
+import Picker from '../bill/Picker.jsx';
 import { fmt, fmt2 } from '../../lib/utils.js';
 import { calcTotals } from '../../lib/storage.js';
 import { sendBillToWhatsApp, downloadPDF, printPDF, copyText } from '../../lib/pdf.js';
@@ -8,7 +9,7 @@ import { buildReceiptText } from '../../lib/receipt.js';
 
 export default function HistoryView({ active }) {
   const { history, updateHistoryItem, deleteHistoryItem } = useBill();
-  const { showToast } = useUI();
+  const { showToast, showModal, hideModal } = useUI();
   const [openId, setOpenId] = useState(null);
   const [editSnapshot, setEditSnapshot] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // Today's date in YYYY-MM-DD format
@@ -64,6 +65,54 @@ export default function HistoryView({ active }) {
           return { ...s, lines };
         });
       };
+      const openPickerForEdit = () => {
+        showModal({
+          title: 'Add item',
+          hideOk: true,
+          body: (
+            <Picker
+              closeOnAdd={true}
+              onAdd={(row, q) => {
+                setEditSnapshot((s) => ({
+                  ...s,
+                  lines: [ ...(s.lines || []), { brand: row.brand, article: row.article || '', size: row.size || '', rate: row.rate || 0, qty: q, custom: !!row.custom } ],
+                }));
+                showToast(`Added · ${row.brand}${row.article ? ' ' + row.article : ''} ${row.size ? 'sz ' + row.size : ''} × ${q}`);
+              }}
+            />
+          ),
+        });
+      };
+      const openManualModal = () => {
+        function ManualBody() {
+          const [q, setQ] = useState(1);
+          const [r, setR] = useState(0);
+          return (
+            <>
+              <label>Quantity</label>
+              <input type="number" min="1" value={q} onChange={(e) => setQ(e.target.value)} />
+              <label style={{ marginTop: 8 }}>Rate (₹)</label>
+              <input type="number" min="0" step="0.01" value={r} onChange={(e) => setR(e.target.value)} />
+              <div className="modal-actions" style={{ marginTop: 12 }}>
+                <button className="btn" onClick={() => hideModal()}>CANCEL</button>
+                <button
+                  className="btn primary"
+                  style={{ flex: 1 }}
+                  onClick={() => {
+                    const qty = Math.max(1, parseInt(q, 10) || 1);
+                    const rate = Math.max(0, parseFloat(r) || 0);
+                    setEditSnapshot((s) => ({ ...s, lines: [ ...(s.lines || []), { brand: 'Manual', article: '', size: '', rate, qty, custom: true } ] }));
+                    showToast(`Manual added · ${qty} × ${fmt(rate)}`);
+                    hideModal();
+                  }}
+                >ADD</button>
+              </div>
+            </>
+          );
+        }
+        showModal({ title: 'Manual row', hideOk: true, body: <ManualBody /> });
+      };
+      // manual entry removed during undo
       const deleteLine = (i) => {
         setEditSnapshot((s) => ({ ...s, lines: s.lines.filter((_, idx) => idx !== i) }));
       };
@@ -127,6 +176,10 @@ export default function HistoryView({ active }) {
             <span><em>Editing {open.billNo}</em></span>
             <span className="count">{editSnapshot.lines.length} {editSnapshot.lines.length === 1 ? 'LINE' : 'LINES'}</span>
           </div>
+          <div style={{ margin: '8px 0', display: 'flex', gap: 8 }}>
+            <button className="btn" onClick={openPickerForEdit}>ADD ITEM</button>
+            <button className="btn" onClick={openManualModal}>MANUAL ENTRY</button>
+          </div>
           <ol className="bill-lines" style={{ marginBottom: 10 }}>
             {editSnapshot.lines.map((l, i) => (
               <li key={i} className="bill-line" style={{ alignItems: 'flex-start' }}>
@@ -167,6 +220,16 @@ export default function HistoryView({ active }) {
                       DEL
                     </button>
                   </div>
+                  <div style={{ marginTop: 8 }}>
+                    <label style={{ fontSize: 10, color: 'var(--muted)', display: 'block', marginBottom: 6 }}>Remark</label>
+                    <input
+                      type="text"
+                      value={l.remark || ''}
+                      placeholder="Optional note for this item"
+                      onChange={(e) => updateLine(i, { remark: e.target.value })}
+                      style={{ width: '100%', padding: '6px 8px', fontSize: 13, border: '1px solid var(--line)', borderRadius: 6 }}
+                    />
+                  </div>
                 </div>
                 <div className="it-amount">{fmt(l.rate * l.qty)}</div>
               </li>
@@ -196,6 +259,10 @@ export default function HistoryView({ active }) {
               <span style={{ fontSize: 13 }}>Deposit ₹</span>
               <input type="number" min="0" inputMode="decimal" value={editSnapshot.deposit || ''} onChange={(e) => setNum('deposit', e.target.value)} style={numIn} />
             </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0' }}>
+              <span style={{ fontSize: 13 }}>Previous Balance ₹</span>
+              <input type="number" min="0" inputMode="decimal" value={editSnapshot.previousBalance || ''} onChange={(e) => setNum('previousBalance', e.target.value)} style={numIn} />
+            </div>
           </div>
           <div className="bill-totals">
             <div className="total-row">
@@ -218,6 +285,12 @@ export default function HistoryView({ active }) {
               <div className="total-row">
                 <span className="lbl">Transport</span>
                 <span className="val">+ {fmt(editTotals.transport)}</span>
+              </div>
+            )}
+            {editTotals.previousBalance > 0 && (
+              <div className="total-row">
+                <span className="lbl">Previous Balance</span>
+                <span className="val">+ {fmt(editTotals.previousBalance)}</span>
               </div>
             )}
             {editTotals.deposit > 0 && (
@@ -282,6 +355,7 @@ export default function HistoryView({ active }) {
               baseSnap.gst = baseSnap.gst || 0;
               baseSnap.transport = baseSnap.transport || 0;
               baseSnap.deposit = baseSnap.deposit || 0;
+              baseSnap.previousBalance = baseSnap.previousBalance || 0;
               setEditSnapshot(baseSnap);
             }}
           >

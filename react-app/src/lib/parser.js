@@ -66,21 +66,16 @@ export function parseInput(raw, idx) {
   let s = raw.trim().replace(/[×*]/g, 'x');
   s = s.replace(/\s+/g, ' ');
   let qty = null;
-  const xMatch = s.match(/\s+x\s*(\d+)\s*$/i);
-  if (xMatch) {
-    qty = parseInt(xMatch[1], 10);
-    s = s.slice(0, xMatch.index).trim();
-  }
   const tokens = s.split(' ').filter(Boolean);
 
-  // Manual mode: "6 x 250"
-  if (qty !== null && tokens.length === 1 && /^\d+$/.test(tokens[0])) {
-    const rate = parseFloat(tokens[0]);
+  // Manual mode: "6 x 250" or "6 * 250" or "6 250"
+  const xyMatch = s.match(/^\s*(\d+)\s*x\s*(\d+(?:\.\d+)?)\s*$/i);
+  if (xyMatch) {
+    qty = parseInt(xyMatch[1], 10);
+    const rate = parseFloat(xyMatch[2]);
     return { kind: 'manual', qty, rate };
   }
-  // Manual via "6 250"
   if (
-    qty === null &&
     tokens.length === 2 &&
     /^\d+$/.test(tokens[0]) &&
     /^\d+(\.\d+)?$/.test(tokens[1])

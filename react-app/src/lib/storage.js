@@ -13,6 +13,7 @@ export function defaultBillState() {
     gst: 0,
     transport: 0,
     deposit: 0,
+    previousBalance: 0,
   };
 }
 
@@ -95,7 +96,9 @@ export function calcTotals(snap) {
   const gstAmt = afterDisc * (snap.gst || 0) / 100;
   const transport = Math.max(0, Number(snap.transport) || 0);
   const deposit = Math.max(0, Number(snap.deposit) || 0);
+  const previousBalance = Math.max(0, Number(snap.previousBalance) || 0);
   const total = afterDisc + gstAmt + transport - deposit;
   const qtyCount = (snap.lines || []).reduce((s, l) => s + l.qty, 0);
-  return { subtotal, discAmt, afterDisc, gstAmt, transport, deposit, total, qtyCount };
+  const totalWithPrev = total + previousBalance;
+  return { subtotal, discAmt, afterDisc, gstAmt, transport, deposit, previousBalance, total: totalWithPrev, qtyCount };
 }

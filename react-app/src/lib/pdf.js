@@ -46,6 +46,8 @@ export function generatePDF(billData, opts = {}) {
   const remC = col.rem.c;
   const itemX = masked ? 0 : col.item.x0 + 2;
   const itemMaxW = masked ? 0 : col.item.w - 4;
+  const remX = col.rem.x0 + 2;
+  const remMaxW = col.rem.x1 - col.rem.x0 - 4;
   // "TOTAL" summary label spans from the left edge to the QTY column.
   const totalLabelC = (left + col.qty.x0) / 2;
 
@@ -174,7 +176,9 @@ export function generatePDF(billData, opts = {}) {
   billData.lines.forEach((l, i) => {
     const nm = `${l.brand}${l.article ? ' ' + l.article : ''}${l.size ? ' ' + l.size : ''}`;
     const wrapped = masked ? [] : doc.splitTextToSize(nm, itemMaxW);
-    const rH = Math.max(7, wrapped.length * 3.8 + 3);
+    const remarkWrapped = l.remark ? doc.splitTextToSize(String(l.remark), remMaxW) : [];
+    const lineCount = Math.max(wrapped.length || 1, remarkWrapped.length || 0);
+    const rH = Math.max(7, lineCount * 3.8 + 3);
 
     if (y + rH > ITEMS_BOTTOM) {
       doc.addPage();
@@ -196,6 +200,12 @@ export function generatePDF(billData, opts = {}) {
     doc.text(String(Math.round(l.rate)), rateC, by, { align: 'center' });
     doc.setFont('helvetica', 'bold');
     doc.text(String(Math.round(l.rate * l.qty)), totalC, by, { align: 'center' });
+    // Render remarks (left-aligned, top of cell)
+    if (remarkWrapped && remarkWrapped.length > 0) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.text(remarkWrapped, remX, y + 4);
+    }
     y += rH;
   });
 

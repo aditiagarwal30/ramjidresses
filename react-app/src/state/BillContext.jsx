@@ -132,6 +132,10 @@ export function BillProvider({ children }) {
     setState((s) => ({ ...s, deposit: Math.max(0, Number(amount) || 0) }));
   }, []);
 
+  const setPreviousBalance = useCallback((amount) => {
+    setState((s) => ({ ...s, previousBalance: Math.max(0, Number(amount) || 0) }));
+  }, []);
+
   const clearBill = useCallback(() => {
     setState(defaultBillState());
   }, []);
@@ -227,11 +231,13 @@ export function BillProvider({ children }) {
       state, totals, history, syncStatus, pendingCount,
       setCustomer, setSalesman, setAddress, addLine, addManual, updateLine, removeLine,
       setDiscount, setGst, setTransport, setDeposit, clearBill, finalizeBill, pushHistory, updateHistoryItem, deleteHistoryItem,
+      setPreviousBalance,
     }),
     [
       state, totals, history, syncStatus, pendingCount,
       setCustomer, setSalesman, setAddress, addLine, addManual, updateLine, removeLine,
       setDiscount, setGst, setTransport, setDeposit, clearBill, finalizeBill, pushHistory, updateHistoryItem, deleteHistoryItem,
+      setPreviousBalance,
     ]
   );
 

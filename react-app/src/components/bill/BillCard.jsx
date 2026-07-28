@@ -103,6 +103,12 @@ export default function BillCard() {
               <span className="val">+ {fmt(totals.transport)}</span>
             </div>
           )}
+          {totals.previousBalance > 0 && (
+            <div className="total-row">
+              <span className="lbl">Previous Balance</span>
+              <span className="val">+ {fmt(totals.previousBalance)}</span>
+            </div>
+          )}
           {totals.deposit > 0 && (
             <div className="total-row">
               <span className="lbl">Deposit</span>

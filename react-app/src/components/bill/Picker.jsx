@@ -4,10 +4,10 @@ import { useBill } from '../../state/BillContext.jsx';
 import { useUI } from '../../state/UIContext.jsx';
 import { fmt, fmt2, norm } from '../../lib/utils.js';
 
-export default function Picker() {
+export default function Picker({ onAdd, closeOnAdd = false }) {
   const { idx } = useRates();
   const { addLine } = useBill();
-  const { showToast, openSearchSheet } = useUI();
+  const { showToast, openSearchSheet, hideModal } = useUI();
 
   // null means "not picked yet". article === '' means "this brand has no articles".
   const [brand, setBrand] = useState(null);
@@ -149,16 +149,21 @@ export default function Picker() {
 
   const canAdd = rate != null;
 
-  const onAdd = () => {
+  const handleAdd = () => {
     if (!canAdd) return;
     const q = parseInt(qty, 10) || 1;
     const row = idx.brandIndex[brand].find(
       (r) => norm(r.article) === norm(article) && r.size === size
     );
     if (!row) return;
-    addLine(row, q);
-    showToast(`Added · ${row.brand}${row.article ? ' ' + row.article : ''} ${row.size ? 'sz ' + row.size : ''} × ${q}`);
+    if (onAdd) {
+      try { onAdd(row, q); } catch (e) { /* swallow */ }
+    } else {
+      addLine(row, q);
+      showToast(`Added · ${row.brand}${row.article ? ' ' + row.article : ''} ${row.size ? 'sz ' + row.size : ''} × ${q}`);
+    }
     softReset();
+    if (closeOnAdd) hideModal();
   };
 
   return (
@@ -222,7 +227,7 @@ export default function Picker() {
           >
             +
           </button>
-          <button className="add-now" disabled={!canAdd} onClick={onAdd}>
+          <button className="add-now" disabled={!canAdd} onClick={handleAdd}>
             ＋ ADD TO BILL
           </button>
         </div>

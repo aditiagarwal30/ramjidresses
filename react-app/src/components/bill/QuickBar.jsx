@@ -86,7 +86,7 @@ export default function QuickBar() {
         <input
           className="quick-input"
           type="text"
-          placeholder='e.g. "6 x 250"  or  "sahil 2030 2"'
+          placeholder='e.g. "<quantity> <space> <rate>"  or  "sahil 2030 2"'
           value={val}
           onChange={(e) => setVal(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}

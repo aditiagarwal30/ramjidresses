@@ -5,6 +5,7 @@ import DiscountModal from '../bill/DiscountModal.jsx';
 import GstModal from '../bill/GstModal.jsx';
 import TransportModal from '../bill/TransportModal.jsx';
 import DepositModal from '../bill/DepositModal.jsx';
+import PreviousBalanceModal from '../bill/PreviousBalanceModal.jsx';
 import DoneBillModal from '../bill/DoneBillModal.jsx';
 import CustomerNameModal from '../bill/CustomerNameModal.jsx';
 import { useBill } from '../../state/BillContext.jsx';
@@ -26,6 +27,9 @@ export default function BillView({ active }) {
   };
   const onDeposit = () => {
     showModal({ title: 'Deposit / advance', body: <DepositModal />, hideOk: true });
+  };
+  const onPrevBalance = () => {
+    showModal({ title: 'Previous Balance', body: <PreviousBalanceModal />, hideOk: true });
   };
   const onClear = () => {
     if (!window.confirm('Clear current bill?')) return;
@@ -84,6 +88,9 @@ export default function BillView({ active }) {
       <div className="actions three">
         <button className="btn" onClick={onTransport}>TRANSPORT</button>
         <button className="btn" onClick={onDeposit}>DEPOSIT</button>
+        <button className="btn" onClick={onPrevBalance}>PREV BAL</button>
+      </div>
+      <div className="actions" style={{ marginTop: 8 }}>
         <button className="btn danger" onClick={onClear}>CLEAR</button>
       </div>
       <div className="actions">
