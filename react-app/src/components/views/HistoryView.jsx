@@ -7,6 +7,19 @@ import { calcTotals } from '../../lib/storage.js';
 import { sendBillToWhatsApp, downloadPDF, printPDF, copyText } from '../../lib/pdf.js';
 import { buildReceiptText } from '../../lib/receipt.js';
 
+const monthMap = {
+  Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6,
+  Jul: 7, Aug: 8, Sep: 9, Sept: 9, Oct: 10, Nov: 11, Dec: 12,
+};
+
+function toIsoDateFromBillString(value) {
+  const [day, monthName, year] = (value || '').split(' ');
+  if (!day || !monthName || !year) return null;
+  const month = monthMap[monthName];
+  if (!month) return null;
+  return `${year}-${String(month).padStart(2, '0')}-${String(parseInt(day, 10)).padStart(2, '0')}`;
+}
+
 export default function HistoryView({ active }) {
   const { history, updateHistoryItem, deleteHistoryItem } = useBill();
   const { showToast, showModal, hideModal } = useUI();
@@ -22,15 +35,11 @@ export default function HistoryView({ active }) {
   // When searching: match by customer name across ALL dates.
   // Otherwise: filter by the selected date. Either way, sum the matches.
   const { filteredBills, totalSales } = useMemo(() => {
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const q = search.trim().toLowerCase();
 
     const filtered = history.filter((bill) => {
       if (q) return (bill.customer || '').toLowerCase().includes(q);
-      const [day, monthName, year] = (bill.date || '').split(' ');
-      const month = monthNames.indexOf(monthName) + 1;
-      if (!day || !month || !year) return false;
-      const billDate = `${year}-${String(month).padStart(2, '0')}-${String(parseInt(day, 10)).padStart(2, '0')}`;
+      const billDate = toIsoDateFromBillString(bill.date);
       return billDate === selectedDate;
     });
 
