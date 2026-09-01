@@ -5,6 +5,7 @@ import { RatesProvider } from './state/RatesContext.jsx';
 import { BillProvider } from './state/BillContext.jsx';
 import { UIProvider } from './state/UIContext.jsx';
 import { AuthProvider, useAuth } from './state/AuthContext.jsx';
+import { isSupabaseConfigured } from './lib/supabase.js';
 import SignInScreen from './components/auth/SignInScreen.jsx';
 import './index.css';
 
@@ -17,7 +18,7 @@ function Gate() {
       </div>
     );
   }
-  if (!user) return <SignInScreen />;
+  if (!user && isSupabaseConfigured) return <SignInScreen />;
   return (
     <RatesProvider>
       <BillProvider>
